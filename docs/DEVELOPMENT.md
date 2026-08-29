@@ -71,3 +71,9 @@ grep -n -- '-d both' cellnet
 ```
 
 The included GitHub Actions workflow runs syntax validation and ShellCheck.
+
+## Language policy
+
+Source code comments, help text, diagnostic messages, internal status labels and repository documentation are maintained in English.
+
+New contributions should not introduce user-facing strings or source comments in another language unless localization support is intentionally added as a separate feature.

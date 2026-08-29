@@ -1,5 +1,10 @@
 # Changelog
 
+## v9.4-stable-english
+- Converted all script comments, help text, diagnostics and user-facing output to English.
+- Converted internal result status tokens from `ERRO`/`PARCIAL` to `ERROR`/`PARTIAL`.
+- Preserved all v9.3 behavior, commands, speed-test modes and 3-second RF/CA sampling.
+
 ## Documentation update
 - Added project motivation and multi-network eSIM use case.
 - Documented the Hypecon MVNO test environment with TIM/Vivo host networks.

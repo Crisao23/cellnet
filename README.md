@@ -6,7 +6,7 @@ The project was developed using a **Hypecon MVNO eSIM in Brazil**, with access t
 
 Because the U5G Max Outdoor UI currently does not expose manual host-network selection, `cellnet` uses the modem's QMI interface to inspect the current network, select a specific PLMN, analyze LTE/5G radio conditions and compare real-world performance.
 
-Current baseline: **v9.3-stable-sampling-3s**
+Current baseline: **v9.4-stable-english**
 
 > This is an independent project and is not affiliated with or endorsed by Ubiquiti, Hypecon, TIM, Vivo or Claro.
 
@@ -253,7 +253,7 @@ state=3 -> download
 state=4 -> upload
 ```
 
-`UL CA ativa` refers specifically to LTE Carrier Aggregation SCells; it does not directly indicate NR uplink use.
+`UL CA active` refers specifically to LTE Carrier Aggregation SCells; it does not directly indicate NR uplink use.
 
 ## Data usage
 
@@ -275,4 +275,4 @@ state=4 -> upload
 
 ## License
 
-No open-source license is selected automatically. Before publishing the repository, choose the license that matches how you want others to use the code. See [LICENSE-OPTIONS.md](LICENSE-OPTIONS.md).
+This project is licensed under the [MIT License](LICENSE).

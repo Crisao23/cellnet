@@ -4,21 +4,21 @@ Values below are placeholders and vary by network conditions.
 
 ```text
 Status:                OK
-Operadora:             VIVO
+Carrier:             VIVO
 PLMN:                  72410
 Interface:             wwan0
-Modo servidor:         automatico
-Servidor usado:        http://<selected-server>:80
+Server mode:         automatico
+Server used:        http://<selected-server>:80
 Download:              <Mbps>
 Upload:                <Mbps>
-Latencia:              <ms>
+Latency:              <ms>
 
-CA / RF POR FASE
-DL CA ativa:           <active>/<samples>
+CA / RF BY PHASE
+DL CA active:           <active>/<samples>
 DL Max SCells:         <count>
 DL LTE SNR:            <range>
 DL 5G SNR:             <range>
-UL CA ativa:           <active>/<samples>
+UL CA active:           <active>/<samples>
 UL Max SCells:         <count>
 UL LTE SNR:            <range>
 UL 5G SNR:             <range>

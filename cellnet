@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# cellnet - Controle de operadora e testes no UniFi U5G-Max-Outdoor
+# cellnet - Carrier control and diagnostics for the UniFi U5G Max Outdoor
 #
 # Ambiente validado:
 #   PRODUCT:  U5G-Max-Outdoor
@@ -9,11 +9,11 @@
 #   QMI:      /dev/wwan0qmi0
 #   WWAN:     wwan0
 #
-# IMPORTANTE:
-#   - Este script NAO altera RAT / Mode Preference / bandas.
-#   - A troca de operadora altera APENAS o PLMN.
-#   - Speedtest e compare-speed forcam os sockets em wwan0.
-#   - O servidor de speedtest fica fixado no servidor Ubiquiti de Sao Paulo.
+# IMPORTANT:
+#   - This script does NOT change RAT / Mode Preference / bands.
+#   - Carrier switching changes ONLY the PLMN.
+#   - speedtest and compare-speed force sockets through wwan0.
+#   - Fixed-server speed tests use the configured Ubiquiti server.
 #
 
 DEVICE="/dev/wwan0qmi0"
@@ -33,7 +33,7 @@ NSA_STABILIZE=8
 SPEEDTEST_DURATION=10
 SPEEDTEST_SERVER="http://103.14.27.177:80"
 SPEEDTEST_MODE_DEFAULT="auto"
-CELLNET_BASELINE_VERSION="9.3-stable-sampling-3s"
+CELLNET_BASELINE_VERSION="9.4-stable-english"
 SPEEDTEST_MONITOR_INTERVAL=3
 SPEEDTEST_RETRIES=1
 SPEEDTEST_RETRY_WAIT=10
@@ -41,7 +41,7 @@ SPEEDTEST_WARMUP_DURATION=3
 SPEEDTEST_WARMUP_WAIT=2
 
 die() {
-    echo "ERRO: $*" >&2
+    echo "ERROR: $*" >&2
     exit 1
 }
 
@@ -51,18 +51,18 @@ separator() {
 
 check_requirements() {
     command -v "$QMICLI" >/dev/null 2>&1 ||
-        die "qmicli nao encontrado."
+        die "qmicli not found."
 
     [ -e "$DEVICE" ] ||
-        die "Dispositivo QMI nao encontrado: $DEVICE"
+        die "QMI device not found: $DEVICE"
 }
 
 check_speedtest_requirements() {
     command -v ui-speed >/dev/null 2>&1 ||
-        die "ui-speed nao encontrado."
+        die "ui-speed not found."
 
     [ -e "/sys/class/net/$WWAN_IF" ] ||
-        die "Interface $WWAN_IF nao encontrada."
+        die "Interface $WWAN_IF not found."
 }
 
 qmi() {
@@ -109,7 +109,7 @@ wait_registration() {
     EXPECTED="$1"
 
     echo
-    echo "Aguardando registro na rede..."
+    echo "Waiting for network registration..."
 
     COUNT=0
 
@@ -121,20 +121,20 @@ wait_registration() {
 
             if [ -z "$EXPECTED" ] || [ "$CURRENT" = "$EXPECTED" ]; then
                 echo
-                echo "Registro concluido."
+                echo "Registration completed."
                 [ -n "$CURRENT" ] &&
-                    echo "Rede: $(plmn_name "$CURRENT") ($CURRENT)"
+                    echo "Network: $(plmn_name "$CURRENT") ($CURRENT)"
                 return 0
             fi
         fi
 
         COUNT=$((COUNT + 1))
-        echo "  aguardando... $((COUNT * WAIT_INTERVAL))s"
+        echo "  waiting... $((COUNT * WAIT_INTERVAL))s"
         sleep "$WAIT_INTERVAL"
     done
 
     echo
-    echo "ATENCAO: nao houve registro esperado apos $((WAIT_MAX * WAIT_INTERVAL)) segundos."
+    echo "WARNING: expected registration did not occur after $((WAIT_MAX * WAIT_INTERVAL)) seconds."
     return 1
 }
 
@@ -160,7 +160,7 @@ check_5g_nsa_ready() {
     if [ "$NSA" = "yes" ] &&
        [ -n "$NR_RSRP" ] &&
        [ "$NR_RSRP" != "n/a" ]; then
-        echo "5G NSA ja ativo."
+        echo "5G NSA already active."
         echo "  RSRP: $NR_RSRP"
         [ -n "$NR_SNR" ]  && echo "  SNR:  $NR_SNR"
         [ -n "$NR_RSRQ" ] && echo "  RSRQ: $NR_RSRQ"
@@ -174,7 +174,7 @@ wait_5g_nsa() {
     ELAPSED=0
 
     echo
-    echo "Aguardando 5G NSA..."
+    echo "Waiting for 5G NSA..."
 
     while [ "$ELAPSED" -lt "$NSA_WAIT_MAX" ]; do
         SYS="$(qmi --nas-get-system-info 2>/dev/null)"
@@ -199,23 +199,23 @@ wait_5g_nsa() {
            [ -n "$NR_RSRP" ] &&
            [ "$NR_RSRP" != "n/a" ]; then
 
-            echo "5G NSA detectado."
+            echo "5G NSA detected."
             echo "  RSRP: $NR_RSRP"
             [ -n "$NR_SNR" ]  && echo "  SNR:  $NR_SNR"
             [ -n "$NR_RSRQ" ] && echo "  RSRQ: $NR_RSRQ"
 
-            echo "Aguardando ${NSA_STABILIZE}s para estabilizacao de NSA/CA..."
+            echo "Waiting ${NSA_STABILIZE}s for NSA/CA stabilization..."
             sleep "$NSA_STABILIZE"
             return 0
         fi
 
         sleep "$NSA_WAIT_INTERVAL"
         ELAPSED=$((ELAPSED + NSA_WAIT_INTERVAL))
-        echo "  aguardando 5G... ${ELAPSED}s"
+        echo "  waiting for 5G... ${ELAPSED}s"
     done
 
     echo
-    echo "ATENCAO: 5G NSA nao ficou ativo apos ${NSA_WAIT_MAX}s."
+    echo "WARNING: 5G NSA did not become active within ${NSA_WAIT_MAX}s."
     echo "Continuando com LTE."
     return 1
 }
@@ -225,7 +225,7 @@ set_manual_network() {
     PLMN="$2"
 
     separator
-    echo "Selecionando $NAME"
+    echo "Selecting $NAME"
     echo "PLMN: $PLMN"
     separator
 
@@ -233,7 +233,7 @@ set_manual_network() {
     RC=$?
 
     [ "$RC" -eq 0 ] ||
-        die "Falha ao solicitar selecao de $NAME."
+        die "Failed to request selection of $NAME."
 
     wait_registration "$PLMN"
     RC=$?
@@ -241,7 +241,7 @@ set_manual_network() {
     echo
 
     if [ "$RC" -ne 0 ]; then
-        echo "Estado atual:"
+        echo "Current state:"
         qmi --nas-get-serving-system
         return 1
     fi
@@ -255,14 +255,14 @@ set_manual_network() {
 
 set_auto() {
     separator
-    echo "Selecionando operadora automaticamente"
+    echo "Selecting carrier automatically"
     separator
 
     qmi --nas-set-system-selection-preference="automatic"
     RC=$?
 
     [ "$RC" -eq 0 ] ||
-        die "Falha ao ativar selecao automatica."
+        die "Failed to enable automatic network selection."
 
     wait_registration ""
     RC=$?
@@ -291,26 +291,26 @@ short_status() {
     PLMN="$(get_current_plmn)"
     NAME="$(plmn_name "$PLMN")"
 
-    echo "Rede atual"
+    echo "Current network"
     separator
 
-    printf "%-18s %s\n" "Registro:" "${REG:-desconhecido}"
-    printf "%-18s %s\n" "Operadora:" "$NAME"
-    printf "%-18s %s\n" "PLMN:" "${PLMN:-desconhecido}"
-    printf "%-18s %s\n" "RAT principal:" "${RAT:-desconhecido}"
-    printf "%-18s %s\n" "Roaming:" "${ROAM:-desconhecido}"
+    printf "%-18s %s\n" "Registration:" "${REG:-unknown}"
+    printf "%-18s %s\n" "Carrier:" "$NAME"
+    printf "%-18s %s\n" "PLMN:" "${PLMN:-unknown}"
+    printf "%-18s %s\n" "RAT principal:" "${RAT:-unknown}"
+    printf "%-18s %s\n" "Roaming:" "${ROAM:-unknown}"
 }
 
 signal_status() {
     separator
-    echo "SINAL DE RADIO"
+    echo "RADIO SIGNAL"
     separator
     qmi --nas-get-signal-info
 }
 
 cell_status() {
     separator
-    echo "CELULA / FREQUENCIAS"
+    echo "CELL / FREQUENCIES"
     separator
     qmi --nas-get-cell-location-info
 }
@@ -346,14 +346,14 @@ rf_status() {
 
 preferences() {
     separator
-    echo "PREFERENCIAS DO MODEM"
+    echo "MODEM PREFERENCES"
     separator
     qmi --nas-get-system-selection-preference
 }
 
 scan_networks() {
     separator
-    echo "SCAN DE OPERADORAS"
+    echo "CARRIER SCAN"
     echo "Pode levar algum tempo..."
     separator
     qmi --nas-network-scan
@@ -364,7 +364,7 @@ full_status() {
 
     echo
     separator
-    echo "SINAL"
+    echo "SIGNAL"
     separator
     qmi --nas-get-signal-info
 
@@ -376,7 +376,7 @@ full_status() {
 
     echo
     separator
-    echo "CELULA"
+    echo "CELL"
     separator
     qmi --nas-get-cell-location-info
 
@@ -396,7 +396,7 @@ snapshot() {
     separator
     echo "SNAPSHOT: $LABEL"
     echo "Data: $NOW"
-    echo "Operadora: $NAME"
+    echo "Carrier: $NAME"
     echo "PLMN: $PLMN"
     separator
 
@@ -426,7 +426,7 @@ snapshot() {
             grep -E \
             "PLMN:|Tracking Area Code:|Global Cell ID:|EUTRA Absolute|Serving Cell ID:|5GNR ARFCN:"
     else
-        echo "Nao foi possivel obter Cell Location Info:"
+        echo "Unable to obtain Cell Location Info:"
         echo "$CELL"
     fi
 
@@ -439,12 +439,12 @@ snapshot() {
 compare_networks() {
     echo
     echo "============================================================"
-    echo " COMPARACAO RF TIM x VIVO"
+    echo " TIM x VIVO RF COMPARISON"
     echo "============================================================"
     echo
-    echo "O script ira alternar entre as duas redes."
-    echo "Nao altera RAT nem bandas."
-    echo "Espera registro + tentativa de 5G NSA antes do snapshot."
+    echo "The script will switch between both networks."
+    echo "Does not change RAT or bands."
+    echo "Waits for registration + 5G NSA attempt before the snapshot."
     echo
 
     echo "===== TIM ====="
@@ -452,7 +452,7 @@ compare_networks() {
         echo
         snapshot "TIM"
     else
-        echo "Falha ao registrar na TIM."
+        echo "Failed to register on TIM."
     fi
 
     echo
@@ -461,24 +461,24 @@ compare_networks() {
         echo
         snapshot "VIVO"
     else
-        echo "Falha ao registrar na VIVO."
+        echo "Failed to register on VIVO."
     fi
 
     echo
     separator
-    echo "Comparacao concluida."
+    echo "Comparison completed."
     separator
     echo
-    echo "O modem permanecera na VIVO."
+    echo "The modem will remain on VIVO."
 }
 
 validate_duration() {
     case "$1" in
         ''|*[!0-9]*)
-            die "Duracao invalida: '$1'. Use segundos inteiros, ex.: 10."
+            die "Invalid duration: '$1'. Use whole seconds, e.g. 10."
             ;;
         0)
-            die "A duracao deve ser maior que zero."
+            die "Duration must be greater than zero."
             ;;
     esac
 }
@@ -533,8 +533,8 @@ speedtest_server_arg() {
 speedtest_mode_label() {
     MODE="$1"
     case "$MODE" in
-        fixed) echo "fixo: $SPEEDTEST_SERVER" ;;
-        *) echo "automatico" ;;
+        fixed) echo "fixed: $SPEEDTEST_SERVER" ;;
+        *) echo "automatic" ;;
     esac
 }
 
@@ -616,7 +616,7 @@ monitor_rf_ca() {
         PHASE="$(get_speedtest_phase "$OUTFILE")"
         SIG="$(get_signal_compact)"
         CA="$(get_ca_sample)"
-        # timestamp|phase|6 campos de sinal|4 campos de CA
+        # timestamp|phase|6 signal fields|4 CA fields
         printf "%s|%s|%s|%s\n" "${TS:-0}" "$PHASE" "$SIG" "$CA" >> "$LOG"
         sleep "$INTERVAL"
     done
@@ -843,7 +843,7 @@ describe_selected_server() {
     if [ -n "$SELECTED" ]; then
         echo "$SELECTED"
     else
-        echo "automatico / nao informado pelo ui-speed"
+        echo "automatic / not reported by ui-speed"
     fi
 }
 
@@ -877,12 +877,12 @@ speedtest_warmup() {
     rm -f "$TMP"
 
     if [ "$RC" -eq 0 ]; then
-        echo "Warm-up concluido."
+        echo "Warm-up completed."
         return 0
     fi
 
-    echo "Warm-up retornou rc=$RC; seguindo para o teste principal."
-    [ -n "$ERR" ] && echo "Warm-up erro: $ERR"
+    echo "Warm-up returned rc=$RC; continuing with the main test."
+    [ -n "$ERR" ] && echo "Warm-up error: $ERR"
     [ -n "$LAST" ] && echo "Warm-up ultimo evento: $LAST"
     return 0
 }
@@ -918,17 +918,17 @@ speedtest_capture_once() {
     FINAL="$(echo "$OUT" | grep '"state":5' | tail -n 1)"
     STATUS="OK"
 
-    # Se nao houver state=5, preserve o ultimo resultado parcial (state=7)
+    # If there is no state=5, preserve the latest partial result (state=7)
     # em vez de jogar fora os dados uteis.
     if [ -z "$FINAL" ]; then
         FINAL="$(echo "$OUT" | grep '"state":7' | tail -n 1)"
-        [ -n "$FINAL" ] && STATUS="PARCIAL"
+        [ -n "$FINAL" ] && STATUS="PARTIAL"
     fi
 
     # Ultimo recurso: linha mais recente que possua down/up.
     if [ -z "$FINAL" ]; then
         FINAL="$(echo "$OUT" | grep -E '"down":[0-9]+|"up":[0-9]+' | tail -n 1)"
-        [ -n "$FINAL" ] && STATUS="PARCIAL"
+        [ -n "$FINAL" ] && STATUS="PARTIAL"
     fi
 
     RF_AFTER="$(get_signal_compact)"
@@ -973,7 +973,7 @@ speedtest_capture_once() {
     if [ -z "$FINAL" ]; then
         rm -f "$OUTFILE" "$MONFILE"
         printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" \
-            "ERRO" "$NAME" "$PLMN" \
+            "ERROR" "$NAME" "$PLMN" \
             "n/a" "n/a" "n/a" "n/a" "n/a" \
             "${LTE_RSRP:-n/a}" "${LTE_SNR:-n/a}" "${LTE_RSRQ:-n/a}" \
             "${NR_RSRP:-n/a}" "${NR_SNR:-n/a}" "${NR_RSRQ:-n/a}" \
@@ -981,7 +981,7 @@ speedtest_capture_once() {
             "${MON_SAMPLES:-0}" "${CA_ACTIVE_SAMPLES:-0}" "${CA_MAX_ACTIVE:-0}" "${CA_MAX_TOTAL:-0}" \
             "${LTE_RSRP_RANGE:-n/a}" "${LTE_SNR_RANGE:-n/a}" \
             "${NR_RSRP_RANGE:-n/a}" "${NR_SNR_RANGE:-n/a}" "${CA_SCELLS:-n/a}" \
-            "ui-speed sem resultado utilizavel" \
+            "ui-speed returned no usable result" \
             "${DOWN_SAMPLES:-0}" "${DOWN_CA_ACTIVE:-0}" "${DOWN_CA_MAX:-0}" \
             "${UP_SAMPLES:-0}" "${UP_CA_ACTIVE:-0}" "${UP_CA_MAX:-0}" \
             "${DOWN_LTE_SNR_RANGE:-n/a}" "${DOWN_NR_SNR_RANGE:-n/a}" \
@@ -1055,9 +1055,9 @@ speedtest_capture() {
         if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
             LAST_ERR="$(echo "$RECORD" | awk -F'|' '{print $27}')"
             FIELD_COUNT="$(echo "$RECORD" | awk -F'|' '{print NF}')"
-            echo "ATENCAO: speedtest incompleto na tentativa $ATTEMPT/$MAX_ATTEMPTS (registro ${FIELD_COUNT} campos)." >&2
-            [ -n "$LAST_ERR" ] && [ "$LAST_ERR" != "none" ] && echo "Motivo: $LAST_ERR" >&2
-            echo "Repetindo em ${SPEEDTEST_RETRY_WAIT}s..." >&2
+            echo "WARNING: incomplete speed test on attempt $ATTEMPT/$MAX_ATTEMPTS (${FIELD_COUNT}-field record)." >&2
+            [ -n "$LAST_ERR" ] && [ "$LAST_ERR" != "none" ] && echo "Reason: $LAST_ERR" >&2
+            echo "Retrying in ${SPEEDTEST_RETRY_WAIT}s..." >&2
             sleep "$SPEEDTEST_RETRY_WAIT"
         fi
     done
@@ -1119,26 +1119,26 @@ print_speed_record() {
     SPEED_MODE="$1"
     SELECTED_SERVER="$2"
 
-    if [ "$STATUS" = "ERRO" ]; then
-        echo "Speedtest falhou sem resultado utilizavel."
-        [ "$ERRMSG" != "none" ] && echo "Erro: $ERRMSG"
+    if [ "$STATUS" = "ERROR" ]; then
+        echo "Speed test failed without a usable result."
+        [ "$ERRMSG" != "none" ] && echo "Error: $ERRMSG"
         return 1
     fi
 
-    [ "$STATUS" = "PARCIAL" ] && echo "ATENCAO: resultado PARCIAL; o ui-speed nao chegou ao state=5."
+    [ "$STATUS" = "PARTIAL" ] && echo "WARNING: PARTIAL result; ui-speed did not reach state=5."
 
     printf "%-22s %s\n" "Status:" "$STATUS"
-    printf "%-22s %s\n" "Operadora:" "$NAME"
+    printf "%-22s %s\n" "Carrier:" "$NAME"
     printf "%-22s %s\n" "PLMN:" "$PLMN"
     printf "%-22s %s\n" "Interface:" "$WWAN_IF"
-    printf "%-22s %s\n" "Modo servidor:" "$(speedtest_mode_label "$SPEED_MODE")"
-    [ -z "$SELECTED_SERVER" ] && SELECTED_SERVER="automatico / nao informado pelo ui-speed"
-    printf "%-22s %s\n" "Servidor usado:" "$SELECTED_SERVER"
-    printf "%-22s %s\n" "IP publico:" "$PUBLIC_IP"
+    printf "%-22s %s\n" "Server mode:" "$(speedtest_mode_label "$SPEED_MODE")"
+    [ -z "$SELECTED_SERVER" ] && SELECTED_SERVER="automatic / not reported by ui-speed"
+    printf "%-22s %s\n" "Server used:" "$SELECTED_SERVER"
+    printf "%-22s %s\n" "Public IP:" "$PUBLIC_IP"
     printf "%-22s %s\n" "ISP:" "$ISP"
     printf "%-22s %s Mbps\n" "Download:" "$DOWN"
     printf "%-22s %s Mbps\n" "Upload:" "$UP"
-    printf "%-22s %s ms\n" "Latencia:" "$LATENCY"
+    printf "%-22s %s ms\n" "Latency:" "$LATENCY"
     printf "%-22s %s\n" "LTE RSRP:" "$LTE_RSRP"
     printf "%-22s %s\n" "LTE SNR:" "$LTE_SNR"
     printf "%-22s %s\n" "LTE RSRQ:" "$LTE_RSRQ"
@@ -1147,29 +1147,29 @@ print_speed_record() {
     printf "%-22s %s\n" "5G RSRQ:" "$NR_RSRQ"
     printf "%-22s %s bytes\n" "wwan0 RX delta:" "$RX_DELTA"
     printf "%-22s %s bytes\n" "wwan0 TX delta:" "$TX_DELTA"
-    printf "%-22s %s\n" "Amostras RF/CA:" "$MON_SAMPLES"
-    printf "%-22s %s/%s\n" "CA ativa amostras:" "$CA_ACTIVE_SAMPLES" "$MON_SAMPLES"
-    printf "%-22s %s\n" "Max SCells ativas:" "$CA_MAX_ACTIVE"
-    printf "%-22s %s\n" "Max SCells vistas:" "$CA_MAX_TOTAL"
-    printf "%-22s %s\n" "LTE RSRP no teste:" "$LTE_RSRP_RANGE"
-    printf "%-22s %s\n" "LTE SNR no teste:" "$LTE_SNR_RANGE"
-    printf "%-22s %s\n" "5G RSRP no teste:" "$NR_RSRP_RANGE"
-    printf "%-22s %s\n" "5G SNR no teste:" "$NR_SNR_RANGE"
-    printf "%-22s %s\n" "SCells observadas:" "$CA_SCELLS"
+    printf "%-22s %s\n" "RF/CA samples:" "$MON_SAMPLES"
+    printf "%-22s %s/%s\n" "CA-active samples:" "$CA_ACTIVE_SAMPLES" "$MON_SAMPLES"
+    printf "%-22s %s\n" "Max active SCells:" "$CA_MAX_ACTIVE"
+    printf "%-22s %s\n" "Max observed SCells:" "$CA_MAX_TOTAL"
+    printf "%-22s %s\n" "LTE RSRP during test:" "$LTE_RSRP_RANGE"
+    printf "%-22s %s\n" "LTE SNR during test:" "$LTE_SNR_RANGE"
+    printf "%-22s %s\n" "5G RSRP during test:" "$NR_RSRP_RANGE"
+    printf "%-22s %s\n" "5G SNR during test:" "$NR_SNR_RANGE"
+    printf "%-22s %s\n" "Observed SCells:" "$CA_SCELLS"
 
     echo
-    echo "CA / RF POR FASE"
-    printf "%-22s %s/%s\n" "DL CA ativa:" "$DOWN_CA_ACTIVE" "$DOWN_SAMPLES"
+    echo "CA / RF BY PHASE"
+    printf "%-22s %s/%s\n" "DL CA active:" "$DOWN_CA_ACTIVE" "$DOWN_SAMPLES"
     printf "%-22s %s\n" "DL Max SCells:" "$DOWN_CA_MAX"
     printf "%-22s %s\n" "DL LTE SNR:" "$DOWN_LTE_SNR_RANGE"
     printf "%-22s %s\n" "DL 5G SNR:" "$DOWN_NR_SNR_RANGE"
-    printf "%-22s %s/%s\n" "UL CA ativa:" "$UP_CA_ACTIVE" "$UP_SAMPLES"
+    printf "%-22s %s/%s\n" "UL CA active:" "$UP_CA_ACTIVE" "$UP_SAMPLES"
     printf "%-22s %s\n" "UL Max SCells:" "$UP_CA_MAX"
     printf "%-22s %s\n" "UL LTE SNR:" "$UP_LTE_SNR_RANGE"
     printf "%-22s %s\n" "UL 5G SNR:" "$UP_NR_SNR_RANGE"
 
-    if [ "$STATUS" = "PARCIAL" ] && [ "$ERRMSG" != "none" ]; then
-        printf "%-22s %s\n" "Erro ui-speed:" "$ERRMSG"
+    if [ "$STATUS" = "PARTIAL" ] && [ "$ERRMSG" != "none" ]; then
+        printf "%-22s %s\n" "ui-speed error:" "$ERRMSG"
     fi
 
     [ "$STATUS" = "OK" ]
@@ -1186,23 +1186,23 @@ speedtest_current() {
     separator
     echo "SPEEDTEST MOBILE"
     separator
-    echo "Interface forcada: $WWAN_IF"
-    echo "Servidor:          $(speedtest_mode_label "$MODE")"
-    echo "Duracao:           ${DURATION}s"
+    echo "Forced interface: $WWAN_IF"
+    echo "Server:          $(speedtest_mode_label "$MODE")"
+    echo "Duration:           ${DURATION}s"
     echo
 
-    # Speedtest avulso:
-    # - se NSA ja estiver ativo, inicia imediatamente;
-    # - se ainda nao estiver ativo, aguarda a ativacao/estabilizacao.
-    # Nao troca PLMN e nao reconecta a operadora.
+    # Standalone speed test:
+    # - if NSA is already active, start immediately;
+    # - if NSA is not active yet, wait for activation/stabilization.
+    # Does not change PLMN or reconnect the carrier.
     if check_5g_nsa_ready; then
-        echo "Iniciando speedtest sem espera adicional."
+        echo "Starting speed test without additional delay."
     else
         wait_5g_nsa || true
     fi
 
     echo
-    echo "Executando warm-up curto (${SPEEDTEST_WARMUP_DURATION}s)..."
+    echo "Running short warm-up (${SPEEDTEST_WARMUP_DURATION}s)..."
     speedtest_warmup "$MODE" "$SPEEDTEST_WARMUP_DURATION"
     sleep "$SPEEDTEST_WARMUP_WAIT"
 
@@ -1234,13 +1234,13 @@ compare_speed() {
 
     echo
     echo "============================================================"
-    echo " SPEEDTEST COMPARATIVO TIM x VIVO"
+    echo " TIM x VIVO SPEED TEST COMPARISON"
     echo "============================================================"
     echo
     echo "Interface: $WWAN_IF"
-    echo "Servidor:  $(speedtest_mode_label "$MODE")"
-    echo "Duracao:   ${DURATION}s por operadora"
-    echo "Nao altera RAT nem bandas."
+    echo "Server:  $(speedtest_mode_label "$MODE")"
+    echo "Duration:   ${DURATION}s per carrier"
+    echo "Does not change RAT or bands."
     echo
 
     TIM_RESULT=""
@@ -1255,8 +1255,8 @@ compare_speed() {
         echo
         print_speed_record "$TIM_RESULT"
     else
-        TIM_RESULT="ERRO|TIM|$TIM_PLMN"
-        echo "Falha ao registrar na TIM."
+        TIM_RESULT="ERROR|TIM|$TIM_PLMN"
+        echo "Failed to register on TIM."
     fi
 
     echo
@@ -1269,8 +1269,8 @@ compare_speed() {
         echo
         print_speed_record "$VIVO_RESULT"
     else
-        VIVO_RESULT="ERRO|VIVO|$VIVO_PLMN"
-        echo "Falha ao registrar na VIVO."
+        VIVO_RESULT="ERROR|VIVO|$VIVO_PLMN"
+        echo "Failed to register on VIVO."
     fi
 
     echo
@@ -1278,7 +1278,7 @@ compare_speed() {
     echo " RESUMO TIM x VIVO"
     echo "============================================================"
 
-    printf "%-22s %-18s %-18s\n" "Metrica" "TIM" "VIVO"
+    printf "%-22s %-18s %-18s\n" "Metric" "TIM" "VIVO"
     separator
 
     printf "%-22s %-18s %-18s\n" "Download Mbps" \
@@ -1289,7 +1289,7 @@ compare_speed() {
         "$(field_from_record "$TIM_RESULT" 7)" \
         "$(field_from_record "$VIVO_RESULT" 7)"
 
-    printf "%-22s %-18s %-18s\n" "Latencia ms" \
+    printf "%-22s %-18s %-18s\n" "Latency ms" \
         "$(field_from_record "$TIM_RESULT" 8)" \
         "$(field_from_record "$VIVO_RESULT" 8)"
 
@@ -1337,17 +1337,17 @@ compare_speed() {
         "$(field_from_record "$TIM_RESULT" 32)" \
         "$(field_from_record "$VIVO_RESULT" 32)"
 
-    printf "%-22s %-18s %-18s\n" "IP publico" \
+    printf "%-22s %-18s %-18s\n" "Public IP" \
         "$(field_from_record "$TIM_RESULT" 4)" \
         "$(field_from_record "$VIVO_RESULT" 4)"
 
-    printf "%-22s %-18s %-18s\n" "Servidor" \
+    printf "%-22s %-18s %-18s\n" "Server" \
         "$(field_from_record "$TIM_RESULT" 39)" \
         "$(field_from_record "$VIVO_RESULT" 39)"
 
     echo
-    echo "O modem permanecera na VIVO."
-    echo "Use '$0 tim' ou '$0 auto' se quiser alterar depois."
+    echo "The modem will remain on VIVO."
+    echo "Use '$0 tim' or '$0 auto' if you want to change it afterwards."
 }
 
 compare_speed_fixed() {
@@ -1357,71 +1357,70 @@ compare_speed_fixed() {
 
 usage() {
     cat <<EOF
-
-Uso:
+Usage:
 
   $0 tim
-      Forca TIM 72403.
-      Espera registro e depois aguarda 5G NSA.
+      Force TIM PLMN $TIM_PLMN.
+      Wait for registration and then wait for 5G NSA.
 
   $0 vivo
-      Forca VIVO 72410.
-      Espera registro e depois aguarda 5G NSA.
+      Force VIVO PLMN $VIVO_PLMN.
+      Wait for registration and then wait for 5G NSA.
 
   $0 auto
-      Retorna para selecao automatica.
+      Return carrier selection to automatic mode.
 
   $0 status
-      Mostra status resumido.
+      Show a compact status summary.
 
   $0 full
-      Status completo de rede, sinal, celula e RF.
+      Show complete network, signal, cell and RF status.
 
   $0 signal
-      Mostra RSRP / RSRQ / SNR.
+      Show RSRP / RSRQ / SNR.
 
   $0 cell
-      Mostra celula/frequencias.
+      Show serving cell and frequency information.
 
   $0 radio
-      Mostra LTE, 5G NSA e 5G SA.
+      Show LTE, 5G NSA and 5G SA information.
 
   $0 rf
-      Mostra bandas, LTE CA, celula e sinal.
+      Show bands, LTE CA, serving cell and signal information.
 
   $0 preferences
-      Mostra preferencias de rede/RAT atuais.
+      Show current network/RAT preferences.
 
   $0 scan
-      Executa scan das operadoras disponiveis.
+      Scan available carriers.
 
-  $0 snapshot [nome]
-      Coleta snapshot de rede/RF.
+  $0 snapshot [name]
+      Capture a network/RF snapshot.
 
   $0 compare
-      Alterna TIM -> VIVO e coleta snapshots RF.
+      Switch TIM -> VIVO and capture RF snapshots.
 
-  $0 speedtest [segundos]
-      Speedtest da rede atual.
-      FORCA --intf $WWAN_IF.
-      Usa -d both.
-      Servidor automatico escolhido pelo ui-speed.
-      Monitora sinal e LTE CA durante o teste.
+  $0 speedtest [seconds]
+      Run a speed test on the current cellular network.
+      FORCES --intf $WWAN_IF.
+      Uses -d both.
+      Server is automatically selected by ui-speed.
+      Monitors signal and LTE CA during the test.
 
-  $0 speedtest-fixed [segundos]
-      Mesmo teste, mas usando o servidor Ubiquiti fixo:
+  $0 speedtest-fixed [seconds]
+      Run the same test using the fixed Ubiquiti server:
       $SPEEDTEST_SERVER
 
-  $0 compare-speed [segundos]
-      Compara TIM x VIVO com selecao automatica de servidor
-      em cada operadora.
-      FORCA os testes pela interface $WWAN_IF.
-      Compara tambem ativacao de LTE Carrier Aggregation.
+  $0 compare-speed [seconds]
+      Compare TIM x VIVO using automatic server selection
+      independently for each carrier.
+      FORCES tests through interface $WWAN_IF.
+      Also compares LTE Carrier Aggregation activity.
 
-  $0 compare-speed-fixed [segundos]
-      Compara TIM x VIVO usando o MESMO servidor Ubiquiti fixo.
+  $0 compare-speed-fixed [seconds]
+      Compare TIM x VIVO using the SAME fixed Ubiquiti server.
 
-Exemplos:
+Examples:
 
   $0 tim
   $0 vivo
@@ -1440,26 +1439,26 @@ PLMNs:
   TIM   = $TIM_PLMN
   VIVO  = $VIVO_PLMN
 
-Speedtest:
+Speed test:
 
-  Retries   = ${SPEEDTEST_RETRIES}
-  Retry wait= ${SPEEDTEST_RETRY_WAIT}s
-  RF/CA poll= ${SPEEDTEST_MONITOR_INTERVAL}s
-  Warm-up   = ${SPEEDTEST_WARMUP_DURATION}s
+  Retries    = ${SPEEDTEST_RETRIES}
+  Retry wait = ${SPEEDTEST_RETRY_WAIT}s
+  RF/CA poll = ${SPEEDTEST_MONITOR_INTERVAL}s
+  Warm-up    = ${SPEEDTEST_WARMUP_DURATION}s
 
-  Interface = $WWAN_IF
-  Padrao    = servidor automatico
-  Fixo      = $SPEEDTEST_SERVER
-  Duracao   = ${SPEEDTEST_DURATION}s
+  Interface  = $WWAN_IF
+  Default    = automatic server selection
+  Fixed      = $SPEEDTEST_SERVER
+  Duration   = ${SPEEDTEST_DURATION}s
 
-IMPORTANTE:
+IMPORTANT:
 
-  O script NAO usa:
+  The script does NOT use:
 
       5gnr,manual=...
       lte,manual=...
 
-  porque esses parametros alteram Mode Preference/RAT no modem.
+  because these parameters alter the modem Mode Preference/RAT settings.
 
 EOF
 }
