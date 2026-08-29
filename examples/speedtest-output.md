@@ -7,7 +7,7 @@ Status:                OK
 Carrier:             VIVO
 PLMN:                  72410
 Interface:             wwan0
-Server mode:         automatico
+Server mode:         automatic
 Server used:        http://<selected-server>:80
 Download:              <Mbps>
 Upload:                <Mbps>

@@ -6,7 +6,7 @@ The project was developed using a **Hypecon MVNO eSIM in Brazil**, with access t
 
 Because the U5G Max Outdoor UI currently does not expose manual host-network selection, `cellnet` uses the modem's QMI interface to inspect the current network, select a specific PLMN, analyze LTE/5G radio conditions and compare real-world performance.
 
-Current baseline: **v9.4-stable-english**
+Current baseline: **v9.4.1-stable-shellcheck**
 
 > This is an independent project and is not affiliated with or endorsed by Ubiquiti, Hypecon, TIM, Vivo or Claro.
 

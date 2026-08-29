@@ -16,7 +16,7 @@ The current baseline includes a 3-second warm-up plus one retry. Capture the exa
 Current versions should show either a detected URL or:
 
 ```text
-automatico / nao informado pelo ui-speed
+automatic / not reported by ui-speed
 ```
 
 ## High latency with good RF

@@ -1,8 +1,16 @@
 # Changelog
 
+## v9.4.1-stable-shellcheck
+- Fixed GitHub Actions ShellCheck failures.
+- Exposed `CELLNET_BASELINE_VERSION` through CLI help so it is no longer unused.
+- Removed unused pre/post RF/CA snapshot variables.
+- Removed the unused `UI_RC` parser variable.
+- Documented intentional pipe-delimited field splitting with local ShellCheck suppressions for SC2086.
+- Preserved runtime behavior and command compatibility.
+
 ## v9.4-stable-english
 - Converted all script comments, help text, diagnostics and user-facing output to English.
-- Converted internal result status tokens from `ERRO`/`PARCIAL` to `ERROR`/`PARTIAL`.
+- Converted internal result status tokens to English (`ERROR` / `PARTIAL`).
 - Preserved all v9.3 behavior, commands, speed-test modes and 3-second RF/CA sampling.
 
 ## Documentation update
