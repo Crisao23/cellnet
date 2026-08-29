@@ -1,0 +1,10 @@
+*.log
+*.tmp
+*.json
+*.monitor
+*.bak
+*.backup
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
