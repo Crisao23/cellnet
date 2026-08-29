@@ -33,7 +33,7 @@ NSA_STABILIZE=8
 SPEEDTEST_DURATION=10
 SPEEDTEST_SERVER="http://103.14.27.177:80"
 SPEEDTEST_MODE_DEFAULT="auto"
-CELLNET_BASELINE_VERSION="9.4-stable-english"
+CELLNET_BASELINE_VERSION="9.4.1-stable-shellcheck"
 SPEEDTEST_MONITOR_INTERVAL=3
 SPEEDTEST_RETRIES=1
 SPEEDTEST_RETRY_WAIT=10
@@ -896,9 +896,6 @@ speedtest_capture_once() {
     PLMN="$(get_current_plmn)"
     NAME="$(plmn_name "$PLMN")"
 
-    RF_BEFORE="$(get_signal_compact)"
-    CA_BEFORE="$(get_ca_sample)"
-
     RX_BEFORE="$(cat "/sys/class/net/$WWAN_IF/statistics/rx_bytes" 2>/dev/null)"
     TX_BEFORE="$(cat "/sys/class/net/$WWAN_IF/statistics/tx_bytes" 2>/dev/null)"
 
@@ -932,15 +929,18 @@ speedtest_capture_once() {
     fi
 
     RF_AFTER="$(get_signal_compact)"
-    CA_AFTER="$(get_ca_sample)"
     MON_SUMMARY="$(summarize_monitor "$MONFILE")"
 
     OLDIFS="$IFS"
     IFS='|'
+    # Intentional split using IFS="|"; quoting would prevent field parsing.
+    # shellcheck disable=SC2086
     set -- $RF_AFTER
     LTE_RSRP="$1"; LTE_SNR="$2"; LTE_RSRQ="$3"
     NR_RSRP="$4"; NR_SNR="$5"; NR_RSRQ="$6"
 
+    # Intentional split using IFS="|"; quoting would prevent field parsing.
+    # shellcheck disable=SC2086
     set -- $MON_SUMMARY
     MON_SAMPLES="$1"
     CA_ACTIVE_SAMPLES="$2"
@@ -1071,6 +1071,8 @@ print_speed_record() {
 
     OLDIFS="$IFS"
     IFS='|'
+    # Intentional split using IFS="|"; quoting would prevent field parsing.
+    # shellcheck disable=SC2086
     set -- $RECORD
     IFS="$OLDIFS"
 
@@ -1091,7 +1093,6 @@ print_speed_record() {
     NR_RSRQ="$5"
     RX_DELTA="$6"
     TX_DELTA="$7"
-    UI_RC="$8"
     MON_SAMPLES="$9"
     shift 9
     CA_ACTIVE_SAMPLES="$1"
@@ -1357,6 +1358,8 @@ compare_speed_fixed() {
 
 usage() {
     cat <<EOF
+Version: $CELLNET_BASELINE_VERSION
+
 Usage:
 
   $0 tim
