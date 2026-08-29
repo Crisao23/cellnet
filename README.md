@@ -1,10 +1,131 @@
 # cellnet
 
-`cellnet` is a POSIX shell utility for diagnostics, carrier selection, RF inspection and controlled throughput testing on the **Ubiquiti UniFi U5G Max Outdoor** through the modem QMI interface.
+`cellnet` is a diagnostic and network-selection utility for the **Ubiquiti UniFi U5G Max Outdoor**, originally created for multi-network eSIM environments where a single eSIM can register on different mobile operators.
+
+The project was developed using a **Hypecon MVNO eSIM in Brazil**, with access to TIM and Vivo networks. In some Brazilian states and depending on service/network availability, Claro may also be available through the same eSIM.
+
+Because the U5G Max Outdoor UI currently does not expose manual host-network selection, `cellnet` uses the modem's QMI interface to inspect the current network, select a specific PLMN, analyze LTE/5G radio conditions and compare real-world performance.
 
 Current baseline: **v9.3-stable-sampling-3s**
 
-> This is an independent project and is not affiliated with or endorsed by Ubiquiti.
+> This is an independent project and is not affiliated with or endorsed by Ubiquiti, Hypecon, TIM, Vivo or Claro.
+
+
+## Why cellnet exists
+
+`cellnet` was created from a practical limitation encountered while using a **Ubiquiti UniFi U5G Max Outdoor** with a multi-network eSIM.
+
+The test environment uses an eSIM provided by **Hypecon**, a Brazilian MVNO. The same eSIM can register on more than one underlying mobile network, including **TIM** and **Vivo**. In some Brazilian states, **Claro** may also be available depending on regional and service conditions.
+
+This creates an interesting use case for the U5G Max Outdoor: the same modem and the same eSIM may have access to multiple host networks, each with different radio conditions, cell load, routing, latency and throughput.
+
+At the time this project was created, the U5G Max Outdoor user interface did not provide a way to explicitly choose which available host mobile network should be used.
+
+The modem can select a network automatically, but the automatically selected operator is not necessarily the one providing the best performance at a given location or time.
+
+For example, one operator may provide:
+
+- stronger RSRP but lower throughput;
+- better 5G NR SNR but higher latency;
+- better LTE Carrier Aggregation but a more congested cell;
+- lower signal strength but substantially better real-world throughput.
+
+This is where `cellnet` becomes useful.
+
+Instead of relying only on automatic network selection, `cellnet` exposes modem information already available through QMI and provides a controlled way to:
+
+- inspect the currently registered operator;
+- compare TIM and Vivo radio conditions;
+- manually select an available PLMN;
+- return the modem to automatic network selection;
+- inspect LTE and 5G NSA signal quality;
+- inspect serving-cell and Carrier Aggregation information;
+- compare latency and throughput between operators;
+- determine which network is actually performing better at that location.
+
+The goal is **not** to replace UniFi's own management software or modify the modem firmware.
+
+The goal is to expose useful modem capabilities that are not currently available through the UniFi UI and make multi-network eSIM deployments easier to understand and optimize.
+
+### Test environment
+
+The original development and testing environment uses:
+
+```text
+Hardware:
+  Ubiquiti UniFi U5G Max Outdoor
+
+SIM:
+  Hypecon eSIM
+
+eSIM type:
+  Multi-network MVNO
+
+Networks observed:
+  TIM   - PLMN 72403
+  Vivo  - PLMN 72410
+
+Other networks:
+  Claro may also be available through the same Hypecon eSIM
+  depending on region and service/network availability.
+
+Cellular mode:
+  LTE + 5G NSA
+
+Modem management:
+  QMI
+
+Cellular interface:
+  wwan0
+
+QMI device:
+  /dev/wwan0qmi0
+```
+
+The important characteristic of this setup is that **carrier choice and SIM choice are not the same thing**.
+
+A single Hypecon eSIM can potentially access multiple host networks. Therefore, replacing the SIM is not required to compare TIM and Vivo: the modem can be instructed to register on a specific available PLMN.
+
+`cellnet` provides a safer and more convenient interface for doing exactly that.
+
+### A practical example
+
+During development, the same U5G Max Outdoor and the same Hypecon eSIM produced very different results depending on the selected host network.
+
+In some tests, TIM presented stronger 5G radio metrics, while Vivo delivered substantially higher throughput and lower latency.
+
+This demonstrated an important point:
+
+> The network with the strongest signal is not necessarily the network with the best performance.
+
+Cell congestion, scheduler behavior, LTE anchor conditions, 5G NR capacity, mobile-core routing and peering can all influence real-world performance.
+
+For that reason, `cellnet` evaluates both **radio conditions** and **actual network performance** instead of making decisions based only on signal strength.
+
+### Multi-network eSIM flow
+
+```text
+                         Hypecon eSIM
+                              |
+               +--------------+--------------+
+               |              |              |
+              TIM            VIVO          CLARO*
+            72403           72410         regional
+               |              |
+               +-------+------+
+                       |
+               U5G Max Outdoor
+                       |
+                      QMI
+                       |
+                    cellnet
+                       |
+        +--------------+--------------+
+        |              |              |
+   RF analysis    PLMN selection   Speed test
+```
+
+`*` Claro availability depends on region and MVNO/network conditions.
 
 ## Highlights
 
@@ -140,6 +261,7 @@ state=4 -> upload
 
 ## Documentation
 
+- [Use Case and Test Environment](docs/USE-CASE-AND-TEST-ENVIRONMENT.md)
 - [Installation](docs/INSTALLATION.md)
 - [Command Reference](docs/COMMANDS.md)
 - [Architecture](docs/ARCHITECTURE.md)

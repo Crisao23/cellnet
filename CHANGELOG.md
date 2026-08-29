@@ -1,5 +1,12 @@
 # Changelog
 
+## Documentation update
+- Added project motivation and multi-network eSIM use case.
+- Documented the Hypecon MVNO test environment with TIM/Vivo host networks.
+- Added regional/conditional Claro availability note.
+- Added practical explanation of why automatic network selection may not provide the best performance.
+- Added dedicated `USE-CASE-AND-TEST-ENVIRONMENT.md` documentation.
+
 ## v9.3-stable-sampling-3s
 - Reduced RF/CA sampling interval from 5 s to 3 s.
 - Preserved v9.2 result-record fixes.
