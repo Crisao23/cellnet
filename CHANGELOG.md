@@ -1,5 +1,9 @@
 # Changelog
 
+## v9.4.2-stable-english-cleanup
+- Replaced the remaining Portuguese `RESUMO TIM x VIVO` output with `TIM x VIVO SUMMARY`.
+- Preserved all commands, parsing, speed-test behavior and ShellCheck-related fixes from v9.4.1.
+
 ## v9.4.1-stable-shellcheck
 - Fixed GitHub Actions ShellCheck failures.
 - Exposed `CELLNET_BASELINE_VERSION` through CLI help so it is no longer unused.

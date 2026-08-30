@@ -33,7 +33,7 @@ NSA_STABILIZE=8
 SPEEDTEST_DURATION=10
 SPEEDTEST_SERVER="http://103.14.27.177:80"
 SPEEDTEST_MODE_DEFAULT="auto"
-CELLNET_BASELINE_VERSION="9.4.1-stable-shellcheck"
+CELLNET_BASELINE_VERSION="9.4.2-stable-english-cleanup"
 SPEEDTEST_MONITOR_INTERVAL=3
 SPEEDTEST_RETRIES=1
 SPEEDTEST_RETRY_WAIT=10
@@ -1276,7 +1276,7 @@ compare_speed() {
 
     echo
     echo "============================================================"
-    echo " RESUMO TIM x VIVO"
+    echo " TIM x VIVO SUMMARY"
     echo "============================================================"
 
     printf "%-22s %-18s %-18s\n" "Metric" "TIM" "VIVO"
