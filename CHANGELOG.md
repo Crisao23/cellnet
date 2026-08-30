@@ -1,6 +1,7 @@
 # Changelog
 
 ## v9.5.0-radio-intelligence
+- Added a POSIX on-device self-test harness with output assertions, per-command logs, safe opt-in modes and automatic carrier cleanup.
 - Completed the English-language cleanup for remaining source comments, headings and CLI messages.
 - Added `cells` for normalized serving-cell, LTE/NR RF and LTE CA diagnostics.
 - Added `tower-id` with a compact correlation fingerprint and conservative decimal ECI decomposition.

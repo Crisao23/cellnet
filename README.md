@@ -218,6 +218,19 @@ cellnet speedtest
 
 See [Command Reference](docs/COMMANDS.md).
 
+### On-device self-test
+
+The POSIX test harness in `scripts/test-device.sh` targets `/tmp/log/cellnet`. Its default mode runs read-only diagnostics, validates exit codes and output markers, and stores individual logs under `/tmp/log`. Carrier switching, network scanning and speed tests require explicit flags:
+
+```sh
+/tmp/log/test-device.sh
+/tmp/log/test-device.sh --scan
+/tmp/log/test-device.sh --carrier
+/tmp/log/test-device.sh --all
+```
+
+`--all` changes carriers and runs multiple speed tests, which can interrupt SSH and consume substantial cellular data.
+
 ## Speed-test behavior
 
 All throughput tests are bound to:

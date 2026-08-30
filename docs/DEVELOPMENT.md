@@ -80,6 +80,17 @@ grep -n -- '-d both' cellnet
 
 The validation script checks syntax, synchronized executable copies, required commands, safety invariants, and ShellCheck when it is installed. The included GitHub Actions workflow installs ShellCheck and runs the same script.
 
+## On-device integration test
+
+Copy `scripts/test-device.sh` to the device and run it against `/tmp/log/cellnet`:
+
+```sh
+chmod +x /tmp/log/cellnet /tmp/log/test-device.sh
+/tmp/log/test-device.sh
+```
+
+The default is read-only. Optional modes are `--scan`, `--carrier`, `--speed`, and `--all`. Carrier mode restores automatic selection during cleanup. Speed mode consumes cellular data. Each test captures output, validates an expected marker and writes a PASS/FAIL/SKIP summary under `/tmp/log/cellnet-test-*`.
+
 ## Language policy
 
 Source code comments, help text, diagnostic messages, internal status labels and repository documentation are maintained in English.

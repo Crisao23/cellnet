@@ -8,6 +8,7 @@ echo "Checking POSIX shell syntax..."
 sh -n cellnet
 sh -n bin/cellnet
 sh -n install.sh
+sh -n scripts/test-device.sh
 
 echo "Checking executable copies..."
 cmp -s cellnet bin/cellnet || {
@@ -48,7 +49,7 @@ grep -Fq -- '-d both' cellnet || {
 
 if command -v shellcheck >/dev/null 2>&1; then
     echo "Running ShellCheck..."
-    shellcheck -x cellnet bin/cellnet install.sh scripts/validate.sh
+    shellcheck -x cellnet bin/cellnet install.sh scripts/validate.sh scripts/test-device.sh
 else
     echo "ShellCheck not found; skipping optional local lint." >&2
 fi
