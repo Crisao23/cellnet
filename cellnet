@@ -621,6 +621,9 @@ collect_radio_sample() {
     CA_INFO="$(qmi --nas-get-lte-cphy-ca-info 2>/dev/null || true)"
 
     REGISTRATION="$(echo "$SERVING" | quoted_field 'Registration state:')"
+    SAMPLE_RAT="$(echo "$SERVING" |
+        awk '/Radio interfaces:/,/Roaming status:/' |
+        awk -F"'" '/\[0\]:/ {print $2; exit}')"
     MCC="$(echo "$SERVING" | awk '/Current PLMN:/,/Roaming indicators:/' | quoted_field 'MCC:')"
     MNC="$(echo "$SERVING" | awk '/Current PLMN:/,/Roaming indicators:/' | quoted_field 'MNC:')"
     if [ -n "$MNC" ]; then
@@ -635,33 +638,41 @@ collect_radio_sample() {
     fi
     CARRIER="$(plmn_name "$SAMPLE_PLMN")"
 
-    TAC="$(echo "$CELL_INFO" | quoted_field 'Tracking Area Code:')"
-    [ -n "$TAC" ] || TAC="$(echo "$SERVING" | quoted_field 'LTE tracking area code:')"
-    ECI="$(echo "$CELL_INFO" | quoted_field 'Global Cell ID:')"
-    [ -n "$ECI" ] || ECI="$(echo "$SERVING" | quoted_field '3GPP cell ID:')"
-
+    TAC="n/a"
+    ECI="n/a"
     ENODEB="n/a"
     SECTOR="n/a"
-    case "$ECI" in
-        ''|*[!0-9]*) ;;
-        *)
-            ECI_PARTS="$(awk -v eci="$ECI" 'BEGIN {
-                enodeb=int(eci / 256)
-                sector=eci - (enodeb * 256)
-                printf "%.0f|%.0f\n", enodeb, sector
-            }')"
-            ENODEB="$(echo "$ECI_PARTS" | record_field 1)"
-            SECTOR="$(echo "$ECI_PARTS" | record_field 2)"
-            ;;
-    esac
+    LTE_PCI="n/a"
+    LTE_EARFCN="n/a"
+    LTE_BAND="n/a"
+    LTE_BANDWIDTH="n/a"
 
-    LTE_PCI="$(echo "$CELL_INFO" | quoted_field 'Physical Cell ID:')"
-    [ -n "$LTE_PCI" ] || LTE_PCI="$(echo "$CELL_INFO" | quoted_field 'Serving Cell ID:')"
-    LTE_EARFCN="$(echo "$CELL_INFO" | quoted_field 'EUTRA Absolute RF Channel Number:')"
+    if [ "$SAMPLE_RAT" = "lte" ]; then
+        TAC="$(echo "$CELL_INFO" | quoted_field 'Tracking Area Code:')"
+        [ -n "$TAC" ] || TAC="$(echo "$SERVING" | quoted_field 'LTE tracking area code:')"
+        ECI="$(echo "$CELL_INFO" | quoted_field 'Global Cell ID:')"
+        [ -n "$ECI" ] || ECI="$(echo "$SERVING" | quoted_field '3GPP cell ID:')"
 
-    LTE_BAND="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /LTE Band:/{print $2; exit}')"
-    [ -n "$LTE_BAND" ] || LTE_BAND="$(echo "$RF_INFO" | quoted_field 'Active Band Class:')"
-    LTE_BANDWIDTH="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /DL Bandwidth:/{print $2; exit}')"
+        case "$ECI" in
+            ''|*[!0-9]*) ;;
+            *)
+                ECI_PARTS="$(awk -v eci="$ECI" 'BEGIN {
+                    enodeb=int(eci / 256)
+                    sector=eci - (enodeb * 256)
+                    printf "%.0f|%.0f\n", enodeb, sector
+                }')"
+                ENODEB="$(echo "$ECI_PARTS" | record_field 1)"
+                SECTOR="$(echo "$ECI_PARTS" | record_field 2)"
+                ;;
+        esac
+
+        LTE_PCI="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /Physical Cell ID:/{print $2; exit}')"
+        [ -n "$LTE_PCI" ] || LTE_PCI="$(echo "$CELL_INFO" | quoted_field 'Serving Cell ID:')"
+        LTE_EARFCN="$(echo "$CELL_INFO" | quoted_field 'EUTRA Absolute RF Channel Number:')"
+        LTE_BAND="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /LTE Band:/{print $2; exit}')"
+        [ -n "$LTE_BAND" ] || LTE_BAND="$(echo "$RF_INFO" | awk -F"'" '/Radio Interface:.*lte/{lte=1;next} lte && /Active Band Class:/{print $2; exit}')"
+        LTE_BANDWIDTH="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /DL Bandwidth:/{print $2; exit}')"
+    fi
 
     LTE_RSRP="$(echo "$SIGNAL" | awk '/LTE:/,/^$/' | quoted_field 'RSRP:' | metric_number)"
     LTE_RSRQ="$(echo "$SIGNAL" | awk '/LTE:/,/^$/' | quoted_field 'RSRQ:' | metric_number)"
@@ -691,13 +702,14 @@ collect_radio_sample() {
         END { print out }
     ')"
 
-    printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' \
+    printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' \
         "${SAMPLE_PLMN:-n/a}" "${CARRIER:-UNKNOWN}" "${MCC:-n/a}" "${MNC:-n/a}" \
         "${REGISTRATION:-n/a}" "${TAC:-n/a}" "${ECI:-n/a}" "$ENODEB" "$SECTOR" \
         "${LTE_PCI:-n/a}" "${LTE_EARFCN:-n/a}" "${LTE_BAND:-n/a}" "${LTE_BANDWIDTH:-n/a}" \
         "$LTE_RSRP" "$LTE_RSRQ" "$LTE_SNR" "${NR_ARFCN:-n/a}" "${NR_BAND:-n/a}" \
         "${NR_PCI:-n/a}" "${NR_NCI:-n/a}" "$NR_RSRP" "$NR_RSRQ" "$NR_SNR" \
-        "${NSA_STATUS:-n/a}" "${CA_ACTIVE:-0}" "${CA_PRIMARY:-n/a}" "${CA_SCELLS:-n/a}"
+        "${NSA_STATUS:-n/a}" "${CA_ACTIVE:-0}" "${CA_PRIMARY:-n/a}" "${CA_SCELLS:-n/a}" \
+        "${SAMPLE_RAT:-n/a}"
 }
 
 cells_summary() {
@@ -711,6 +723,7 @@ cells_summary() {
     printf '%-24s %s\n' "MCC:" "$(echo "$SAMPLE" | record_field 3)"
     printf '%-24s %s\n' "MNC:" "$(echo "$SAMPLE" | record_field 4)"
     printf '%-24s %s\n' "Registration:" "$(echo "$SAMPLE" | record_field 5)"
+    printf '%-24s %s\n' "Primary RAT:" "$(echo "$SAMPLE" | record_field 28)"
     printf '%-24s %s\n' "LTE TAC:" "$(echo "$SAMPLE" | record_field 6)"
     printf '%-24s %s\n' "LTE ECI / Cell ID:" "$(echo "$SAMPLE" | record_field 7)"
     printf '%-24s %s\n' "LTE eNodeB ID:*" "$(echo "$SAMPLE" | record_field 8)"
@@ -736,6 +749,9 @@ cells_summary() {
     echo
     echo "* Calculated from a decimal ECI using the common LTE layout"
     echo "  (eNodeB = ECI >> 8, sector = ECI & 255); operator layouts may differ."
+    if [ "$(echo "$SAMPLE" | record_field 28)" != "lte" ]; then
+        echo "  LTE identifiers are n/a because the serving RAT is not LTE."
+    fi
 }
 
 tower_id() {
@@ -751,11 +767,13 @@ tower_id() {
     NR_ARFCN="$(echo "$SAMPLE" | record_field 17)"
     NR_PCI="$(echo "$SAMPLE" | record_field 19)"
     NR_NCI="$(echo "$SAMPLE" | record_field 20)"
+    SAMPLE_RAT="$(echo "$SAMPLE" | record_field 28)"
 
     separator
     echo "TOWER LOOKUP IDENTIFIERS"
     separator
     printf '%-18s %s\n' "PLMN:" "$PLMN"
+    printf '%-18s %s\n' "Primary RAT:" "$SAMPLE_RAT"
     printf '%-18s %s\n' "TAC:" "$TAC"
     printf '%-18s %s\n' "ECI / Cell ID:" "$ECI"
     printf '%-18s %s\n' "eNodeB ID:*" "$ENODEB"
@@ -770,6 +788,7 @@ tower_id() {
     echo "Fingerprint: $PLMN TAC=$TAC ECI=$ECI eNB=$ENODEB sector=$SECTOR PCI=$LTE_PCI EARFCN=$LTE_EARFCN NR-ARFCN=$NR_ARFCN"
     echo
     echo "* Calculated from a decimal ECI using the common LTE layout; operator layouts may differ."
+    [ "$SAMPLE_RAT" = "lte" ] || echo "LTE identifiers are n/a because the serving RAT is not LTE."
     echo "No external database or Internet lookup was performed."
 }
 
@@ -1537,6 +1556,25 @@ field_from_record() {
     echo "$RECORD" | awk -F'|' -v n="$INDEX" '{print $n}'
 }
 
+failed_speed_record() {
+    FAILED_NAME="$1"
+    FAILED_PLMN="$2"
+    FAILED_MODE="$3"
+    FAILED_REASON="$4"
+
+    printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" \
+        "ERROR" "$FAILED_NAME" "$FAILED_PLMN" \
+        "n/a" "n/a" "n/a" "n/a" "n/a" \
+        "n/a" "n/a" "n/a" "n/a" "n/a" "n/a" \
+        "n/a" "n/a" "1" \
+        "0" "0" "0" "0" \
+        "n/a" "n/a" "n/a" "n/a" "n/a" \
+        "$FAILED_REASON" \
+        "0" "0" "0" "0" "0" "0" \
+        "n/a" "n/a" "n/a" "n/a" \
+        "$FAILED_MODE" "$(speedtest_mode_label "$FAILED_MODE")"
+}
+
 compare_speed() {
     DURATION="${1:-$SPEEDTEST_DURATION}"
     MODE="${2:-$SPEEDTEST_MODE_DEFAULT}"
@@ -1556,6 +1594,7 @@ compare_speed() {
 
     TIM_RESULT=""
     VIVO_RESULT=""
+    COMPARE_FAILED=0
 
     echo "==================== TIM ===================="
     if set_manual_network "TIM" "$TIM_PLMN"; then
@@ -1563,10 +1602,12 @@ compare_speed() {
         speedtest_warmup "$MODE" "$SPEEDTEST_WARMUP_DURATION"
         sleep "$SPEEDTEST_WARMUP_WAIT"
         TIM_RESULT="$(speedtest_capture "$DURATION" "$MODE")"
+        [ "$(field_from_record "$TIM_RESULT" 1)" = "OK" ] || COMPARE_FAILED=1
         echo
-        print_speed_record "$TIM_RESULT"
+        print_speed_record "$TIM_RESULT" || true
     else
-        TIM_RESULT="ERROR|TIM|$TIM_PLMN"
+        TIM_RESULT="$(failed_speed_record "TIM" "$TIM_PLMN" "$MODE" "carrier registration failed")"
+        COMPARE_FAILED=1
         echo "Failed to register on TIM."
     fi
 
@@ -1577,10 +1618,12 @@ compare_speed() {
         speedtest_warmup "$MODE" "$SPEEDTEST_WARMUP_DURATION"
         sleep "$SPEEDTEST_WARMUP_WAIT"
         VIVO_RESULT="$(speedtest_capture "$DURATION" "$MODE")"
+        [ "$(field_from_record "$VIVO_RESULT" 1)" = "OK" ] || COMPARE_FAILED=1
         echo
-        print_speed_record "$VIVO_RESULT"
+        print_speed_record "$VIVO_RESULT" || true
     else
-        VIVO_RESULT="ERROR|VIVO|$VIVO_PLMN"
+        VIVO_RESULT="$(failed_speed_record "VIVO" "$VIVO_PLMN" "$MODE" "carrier registration failed")"
+        COMPARE_FAILED=1
         echo "Failed to register on VIVO."
     fi
 
@@ -1591,6 +1634,10 @@ compare_speed() {
 
     printf "%-22s %-18s %-18s\n" "Metric" "TIM" "VIVO"
     separator
+
+    printf "%-22s %-18s %-18s\n" "Result status" \
+        "$(field_from_record "$TIM_RESULT" 1)" \
+        "$(field_from_record "$VIVO_RESULT" 1)"
 
     printf "%-22s %-18s %-18s\n" "Download Mbps" \
         "$(field_from_record "$TIM_RESULT" 6)" \
@@ -1659,6 +1706,7 @@ compare_speed() {
     echo
     echo "The modem will remain on VIVO."
     echo "Use '$0 tim' or '$0 auto' if you want to change it afterwards."
+    return "$COMPARE_FAILED"
 }
 
 compare_speed_fixed() {

@@ -288,6 +288,17 @@ run_cellnet "rf" '^RF / BANDS / CARRIER AGGREGATION$' rf || true
 run_cellnet "full" '^Current network$' full || true
 run_cellnet "cells" '^SERVING CELL INTELLIGENCE$' cells || true
 run_cellnet "tower-id" '^TOWER LOOKUP IDENTIFIERS$' tower-id || true
+if grep -Eq 'Primary RAT:[[:space:]]+(umts|gsm|wcdma)' "$RESULT_DIR/status.log"; then
+    if grep -Eq 'LTE ECI / Cell ID:[[:space:]]+n/a$' "$RESULT_DIR/cells.log" &&
+       grep -Eq 'LTE band:[[:space:]]+n/a$' "$RESULT_DIR/cells.log" &&
+       grep -Eq 'eNodeB ID:[*]?[[:space:]]+n/a$' "$RESULT_DIR/tower-id.log"; then
+        pass_test "non-LTE-labeling" "LTE identifiers remain n/a on non-LTE RAT"
+    else
+        fail_test "non-LTE-labeling" "fabricated LTE fields detected; inspect cells/tower-id logs"
+    fi
+else
+    skip_test "non-LTE-labeling" "serving RAT is LTE or unavailable"
+fi
 run_cellnet "snapshot" '^SNAPSHOT: self-test$' snapshot self-test || true
 run_cellnet "watch" '^Read-only radio monitor:' watch "$WATCH_SECONDS" || true
 run_cellnet "stability" '^RF STABILITY SUMMARY$' stability "$STABILITY_SECONDS" || true

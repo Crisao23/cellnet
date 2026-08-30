@@ -31,6 +31,8 @@ The normalized parser only accepts explicitly labeled QMI fields. Firmware, mode
 ## eNodeB or sector is `n/a`
 Automatic decomposition requires a decimal LTE ECI/global cell ID. Hexadecimal, missing or differently formatted identifiers are left unchanged rather than guessed.
 
+When the serving RAT is UMTS/WCDMA, LTE TAC, ECI, eNodeB, sector, PCI, EARFCN and band intentionally remain `n/a`. Use the raw `cell` and `radio` commands for UMTS Cell ID, LAC, UARFCN and scrambling-code details.
+
 ## `watch` reports changes involving `n/a`
 A transition between a value and `n/a` may reflect a temporarily missing modem response rather than an actual handover. Use a longer observation and compare ECI, PCI and EARFCN together.
 

@@ -36,6 +36,8 @@ Combined RF view including LTE Carrier Aggregation.
 ### `cellnet cells`
 Shows a normalized serving-cell summary assembled from local QMI queries. It includes PLMN and registration, LTE cell/channel/signal fields, NR fields explicitly exposed by the modem, NSA availability, and LTE CA state. Missing or ambiguous fields are `n/a`.
 
+LTE ECI, eNodeB, sector, PCI, EARFCN and band fields are emitted only when LTE is the serving RAT. A generic 3GPP/UMTS cell ID is never relabeled or decomposed as LTE ECI.
+
 Decimal LTE ECI values are also decomposed using the common LTE layout (`eNodeB = ECI >> 8`, `sector = ECI & 255`). This calculation may depend on operator implementation.
 
 ### `cellnet tower-id`

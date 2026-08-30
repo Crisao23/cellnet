@@ -66,7 +66,7 @@ The speed-test record is positional. When adding fields:
 4. update `field_from_record` consumers;
 5. test success, retry and error paths.
 
-The radio-intelligence sampler uses a separate 27-field record consumed by `record_field()`. Keep it independent from the speed-test record. If it changes, update `cells_summary()`, `tower_id()`, `watch_radio()`, `stability_summary()` and this documentation together.
+The radio-intelligence sampler uses a separate 28-field record consumed by `record_field()`. Field 28 records the serving RAT so LTE identifiers are emitted only for an LTE serving cell. Keep it independent from the speed-test record. If it changes, update `cells_summary()`, `tower_id()`, `watch_radio()`, `stability_summary()` and this documentation together.
 
 ## Suggested checks
 

@@ -1,6 +1,9 @@
 # Changelog
 
 ## v9.5.0-radio-intelligence
+- Prevented UMTS/3GPP cell IDs and WCDMA bands from being mislabeled as LTE ECI, eNodeB, sector or LTE band.
+- Made speed comparisons return failure and print complete `n/a` records when carrier registration or a constituent speed test fails.
+- Strengthened the on-device tester to detect fabricated LTE fields on a non-LTE serving RAT.
 - Added a POSIX on-device self-test harness with output assertions, per-command logs, safe opt-in modes and automatic carrier cleanup.
 - Completed the English-language cleanup for remaining source comments, headings and CLI messages.
 - Added `cells` for normalized serving-cell, LTE/NR RF and LTE CA diagnostics.
