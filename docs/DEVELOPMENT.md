@@ -82,14 +82,14 @@ The validation script checks syntax, synchronized executable copies, required co
 
 ## On-device integration test
 
-Copy `scripts/test-device.sh` to the device and run it against `/tmp/log/cellnet`:
+Copy `scripts/test-device.sh` to the device and run it against `/tmp/log/cellnet/cellnet`:
 
 ```sh
-chmod +x /tmp/log/cellnet /tmp/log/test-device.sh
-/tmp/log/test-device.sh
+chmod +x /tmp/log/cellnet/cellnet /tmp/log/cellnet/test-device.sh
+/tmp/log/cellnet/test-device.sh
 ```
 
-The default is read-only. Optional modes are `--scan`, `--carrier`, `--speed`, and `--all`. Carrier mode restores automatic selection during cleanup. Speed mode consumes cellular data. Each test captures output, validates an expected marker and writes a PASS/FAIL/SKIP summary under `/tmp/log/cellnet-test-*`.
+The default is read-only. Optional modes are `--scan`, `--carrier`, `--speed`, and `--all`. Carrier mode restores automatic selection during cleanup. Speed mode consumes cellular data. Each test captures output, validates an expected marker and writes a PASS/FAIL/SKIP summary under `/tmp/log/cellnet/cellnet-test-*`.
 
 ## Language policy
 

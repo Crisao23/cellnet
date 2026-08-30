@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# On-device integration tester for /tmp/log/cellnet.
+# On-device integration tester for /tmp/log/cellnet/cellnet.
 # Default mode is read-only and does not run a network scan or speed tests.
 
-DEVICE_DIR="${CELLNET_DEVICE_DIR:-/tmp/log}"
+DEVICE_DIR="${CELLNET_DEVICE_DIR:-/tmp/log/cellnet}"
 CELLNET_PATH="${CELLNET_BIN:-$DEVICE_DIR/cellnet}"
 WATCH_SECONDS="${CELLNET_TEST_WATCH_SECONDS:-9}"
 STABILITY_SECONDS="${CELLNET_TEST_STABILITY_SECONDS:-9}"
@@ -30,13 +30,13 @@ Modes:
   --all       Enable scan, carrier switching and every speed test.
 
 Environment overrides:
-  CELLNET_DEVICE_DIR              Default: /tmp/log
-  CELLNET_BIN                     Default: /tmp/log/cellnet
+  CELLNET_DEVICE_DIR              Default: /tmp/log/cellnet
+  CELLNET_BIN                     Default: /tmp/log/cellnet/cellnet
   CELLNET_TEST_WATCH_SECONDS      Default: 9
   CELLNET_TEST_STABILITY_SECONDS  Default: 9
   CELLNET_TEST_SPEED_SECONDS      Default: 10
 
-Every command writes a separate log under /tmp/log/cellnet-test-<timestamp>-<pid>.
+Every command writes a separate log under /tmp/log/cellnet/cellnet-test-<timestamp>-<pid>.
 The final process exit code is nonzero when any required test fails.
 EOF
 }

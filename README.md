@@ -220,13 +220,13 @@ See [Command Reference](docs/COMMANDS.md).
 
 ### On-device self-test
 
-The POSIX test harness in `scripts/test-device.sh` targets `/tmp/log/cellnet`. Its default mode runs read-only diagnostics, validates exit codes and output markers, and stores individual logs under `/tmp/log`. Carrier switching, network scanning and speed tests require explicit flags:
+The POSIX test harness in `scripts/test-device.sh` targets `/tmp/log/cellnet/cellnet`. Its default mode runs read-only diagnostics, validates exit codes and output markers, and stores individual logs under `/tmp/log/cellnet`. Carrier switching, network scanning and speed tests require explicit flags:
 
 ```sh
-/tmp/log/test-device.sh
-/tmp/log/test-device.sh --scan
-/tmp/log/test-device.sh --carrier
-/tmp/log/test-device.sh --all
+/tmp/log/cellnet/test-device.sh
+/tmp/log/cellnet/test-device.sh --scan
+/tmp/log/cellnet/test-device.sh --carrier
+/tmp/log/cellnet/test-device.sh --all
 ```
 
 `--all` changes carriers and runs multiple speed tests, which can interrupt SSH and consume substantial cellular data.
