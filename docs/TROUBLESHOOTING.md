@@ -25,8 +25,19 @@ Good RSRP/SNR does not guarantee low latency. Possible causes include cell load/
 ## LTE CA shows `deactivated`
 SCells can deactivate rapidly after traffic. Prefer the `CA / RF BY PHASE` counters.
 
+## `cells` or `tower-id` shows `n/a`
+The normalized parser only accepts explicitly labeled QMI fields. Firmware, modem state and qmicli output can vary. Compare with raw `cellnet cell`, `cellnet radio` and `cellnet rf` output. Do not assume an NR PCI, NCI or band from a nearby value unless the modem labels it unambiguously.
+
+## eNodeB or sector is `n/a`
+Automatic decomposition requires a decimal LTE ECI/global cell ID. Hexadecimal, missing or differently formatted identifiers are left unchanged rather than guessed.
+
+## `watch` reports changes involving `n/a`
+A transition between a value and `n/a` may reflect a temporarily missing modem response rather than an actual handover. Use a longer observation and compare ECI, PCI and EARFCN together.
+
 ## QMI LOC GNSS timeout
 A timeout can be caused by lack of satellite visibility indoors. It does not by itself prove GNSS hardware is absent.
+
+GNSS commands are not part of v9.5.0. Tower identifiers and any future external ERB correlation are not GNSS-derived device locations.
 
 ## SSH disconnects
 For long diagnostics:

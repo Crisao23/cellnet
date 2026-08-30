@@ -25,8 +25,22 @@ A background sampler collects LTE/NR metrics and LTE CA state during throughput 
 
 Current interval: `3 seconds`.
 
+### Radio-intelligence sampler
+The `cells`, `tower-id`, `watch` and `stability` commands use a separate foreground sampler. It combines read-only responses from serving-system, signal, system, cell-location, RF-band and LTE-CA QMI queries into a positional internal record. Unsupported or ambiguous fields remain `n/a`.
+
+The layers are intentionally distinct:
+
+1. modem-derived values are labels returned by QMI;
+2. LTE eNodeB/sector values are calculated from a decimal ECI using the common LTE layout;
+3. future tower coordinates would be external database correlations;
+4. device coordinates would require a separately validated GNSS fix.
+
+The last two layers are not implemented. External tower coordinates must never be represented as modem GNSS coordinates.
+
 ### Internal result record
 Speed-test results are serialized into a positional pipe-delimited record. This is a compatibility boundary: changing field order or field count requires updating every parser/consumer.
+
+The radio-intelligence record is independent from the speed-test result record, so diagnostics do not alter throughput parsing.
 
 ## Design principles
 

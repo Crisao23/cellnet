@@ -6,7 +6,7 @@ The project was developed using a **Hypecon MVNO eSIM in Brazil**, with access t
 
 Because the U5G Max Outdoor UI currently does not expose manual host-network selection, `cellnet` uses the modem's QMI interface to inspect the current network, select a specific PLMN, analyze LTE/5G radio conditions and compare real-world performance.
 
-Current baseline: **v9.4.2-stable-english-cleanup**
+Current baseline: **v9.5.0-radio-intelligence**
 
 > This is an independent project and is not affiliated with or endorsed by Ubiquiti, Hypecon, TIM, Vivo or Claro.
 
@@ -132,6 +132,8 @@ For that reason, `cellnet` evaluates both **radio conditions** and **actual netw
 - TIM / Vivo manual PLMN selection and return to automatic selection.
 - LTE / 5G NSA registration and signal diagnostics.
 - Serving-cell, PCI, TAC, EARFCN and RF inspection.
+- Normalized serving-cell and tower lookup identifiers.
+- Read-only RF monitoring and stability summaries without speed tests.
 - LTE Carrier Aggregation visibility.
 - Diagnostic snapshots and TIM × Vivo comparisons.
 - Cellular speed tests forced through `wwan0`.
@@ -181,6 +183,10 @@ Then:
 ```sh
 cellnet status
 cellnet rf
+cellnet cells
+cellnet tower-id
+cellnet watch 60
+cellnet stability 60
 cellnet speedtest
 ```
 
@@ -197,6 +203,10 @@ cellnet speedtest
 | `cellnet cell` | Serving-cell/channel information |
 | `cellnet radio` | LTE/5G NSA/SA information |
 | `cellnet rf` | Bands, LTE CA, cell and signal summary |
+| `cellnet cells` | Normalized serving-cell, LTE/NR signal and CA summary |
+| `cellnet tower-id` | Identifiers for external tower/ERB correlation |
+| `cellnet watch [seconds]` | Timestamped read-only RF/cell monitor; default 60 s |
+| `cellnet stability [seconds]` | RF ranges and cell-change counters; default 60 s |
 | `cellnet preferences` | Current modem system-selection preferences |
 | `cellnet scan` | Scan visible operators |
 | `cellnet snapshot [name]` | Capture a diagnostic snapshot |
@@ -255,9 +265,13 @@ state=4 -> upload
 
 `UL CA active` refers specifically to LTE Carrier Aggregation SCells; it does not directly indicate NR uplink use.
 
+`watch` and `stability` poll local QMI data every 3 seconds and do not run `ui-speed` or perform Internet lookups. Fields not explicitly exposed by the modem are shown as `n/a`.
+
+`cells` and `tower-id` calculate eNodeB and sector identifiers only when the modem returns a decimal LTE ECI. The calculation uses the common layout `eNodeB = ECI >> 8` and `sector = ECI & 255`; operator implementations may differ. These calculated identifiers are distinct from modem-derived values. A future tower database match would be an external correlation, not a modem GNSS position. GNSS/location commands are not implemented in this release.
+
 ## Data usage
 
-5G speed tests can consume substantial mobile quota. Prefer `rf`, `signal`, `cell` and `snapshot` for tuning, and use throughput tests only to validate a change.
+5G speed tests can consume substantial mobile quota. Prefer `rf`, `signal`, `cell`, `cells`, `watch`, `stability` and `snapshot` for tuning, and use throughput tests only to validate a change.
 
 ## Documentation
 

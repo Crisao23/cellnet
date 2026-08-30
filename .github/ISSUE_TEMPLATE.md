@@ -23,5 +23,19 @@ cellnet ...
 
 Remove sensitive information before pasting output.
 
+## Reproduction steps
+
+1.
+2.
+3.
+
+## Relevant output
+
+```text
+Paste redacted output here.
+```
+
 ## Regression?
 Did this work in an earlier version? If yes, which one?
+
+## Additional context

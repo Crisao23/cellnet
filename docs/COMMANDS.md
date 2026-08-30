@@ -33,6 +33,20 @@ Radio availability/status including NSA/SA information exposed by the modem.
 ### `cellnet rf`
 Combined RF view including LTE Carrier Aggregation.
 
+### `cellnet cells`
+Shows a normalized serving-cell summary assembled from local QMI queries. It includes PLMN and registration, LTE cell/channel/signal fields, NR fields explicitly exposed by the modem, NSA availability, and LTE CA state. Missing or ambiguous fields are `n/a`.
+
+Decimal LTE ECI values are also decomposed using the common LTE layout (`eNodeB = ECI >> 8`, `sector = ECI & 255`). This calculation may depend on operator implementation.
+
+### `cellnet tower-id`
+Prints TAC, ECI, calculated eNodeB/sector, PCI, EARFCN and available NR identifiers, plus a compact lookup fingerprint. It does not contact ANATEL, another tower database, or the Internet.
+
+### `cellnet watch [seconds]`
+Runs a timestamped, read-only QMI monitor. The default duration is 60 seconds and the polling interval is 3 seconds. It shows LTE/NR RF values, channels, PLMN and active LTE SCells, and reports changes in PLMN, LTE ECI/PCI/EARFCN and available NR ARFCN/PCI fields. Ctrl+C stops the monitor cleanly.
+
+### `cellnet stability [seconds]`
+Collects the same low-data local QMI samples for 60 seconds by default. POSIX `awk` calculates average, minimum, maximum and range for available LTE/NR RSRP, RSRQ and SNR samples. The summary also counts cell/channel changes and reports the maximum active LTE SCell count. No speed test is run.
+
 ### `cellnet preferences`
 Displays current system-selection preferences.
 

@@ -17,6 +17,10 @@ signal
 cell
 radio
 rf
+cells
+tower-id
+watch
+stability
 preferences
 scan
 snapshot
@@ -30,7 +34,7 @@ compare-speed-fixed
 ## Mandatory checks
 
 ```sh
-sh -n cellnet
+sh scripts/validate.sh
 ```
 
 Also verify:
@@ -41,6 +45,8 @@ Also verify:
 - normal carrier selection does not gain RAT filters;
 - `speedtest_current()` and `compare_speed()` exist;
 - internal result-record field count/indexes are consistent.
+- radio-intelligence queries remain read-only and do not invoke `ui-speed`;
+- unknown NR identifiers remain `n/a` rather than inferred.
 
 ## Dangerous regression
 
@@ -60,6 +66,8 @@ The speed-test record is positional. When adding fields:
 4. update `field_from_record` consumers;
 5. test success, retry and error paths.
 
+The radio-intelligence sampler uses a separate 27-field record consumed by `record_field()`. Keep it independent from the speed-test record. If it changes, update `cells_summary()`, `tower_id()`, `watch_radio()`, `stability_summary()` and this documentation together.
+
 ## Suggested checks
 
 ```sh
@@ -70,7 +78,7 @@ grep -n -- '--intf "$WWAN_IF"' cellnet
 grep -n -- '-d both' cellnet
 ```
 
-The included GitHub Actions workflow runs syntax validation and ShellCheck.
+The validation script checks syntax, synchronized executable copies, required commands, safety invariants, and ShellCheck when it is installed. The included GitHub Actions workflow installs ShellCheck and runs the same script.
 
 ## Language policy
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## v9.5.0-radio-intelligence
+- Added `cells` for normalized serving-cell, LTE/NR RF and LTE CA diagnostics.
+- Added `tower-id` with a compact correlation fingerprint and conservative decimal ECI decomposition.
+- Added read-only `watch` monitoring with explicit PLMN/cell/channel change reporting.
+- Added `stability` summaries using POSIX `awk`, without speed tests or external packages.
+- Kept unavailable or ambiguous modem fields as `n/a`; no NR identifier, tower location or GNSS position is fabricated.
+- Preserved PLMN-only carrier selection, all existing commands and speed-test behavior.
+
 ## v9.4.2-stable-english-cleanup
 - Replaced the remaining Portuguese `RESUMO TIM x VIVO` output with `TIM x VIVO SUMMARY`.
 - Preserved all commands, parsing, speed-test behavior and ShellCheck-related fixes from v9.4.1.

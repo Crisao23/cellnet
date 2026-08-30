@@ -33,7 +33,8 @@ NSA_STABILIZE=8
 SPEEDTEST_DURATION=10
 SPEEDTEST_SERVER="http://103.14.27.177:80"
 SPEEDTEST_MODE_DEFAULT="auto"
-CELLNET_BASELINE_VERSION="9.4.2-stable-english-cleanup"
+CELLNET_BASELINE_VERSION="9.5.0-radio-intelligence"
+RADIO_POLL_INTERVAL=3
 SPEEDTEST_MONITOR_INTERVAL=3
 SPEEDTEST_RETRIES=1
 SPEEDTEST_RETRY_WAIT=10
@@ -101,7 +102,7 @@ plmn_name() {
         72410) echo "VIVO" ;;
         72418) echo "HYPECON/DATORA" ;;
         72405) echo "CLARO" ;;
-        *)     echo "DESCONHECIDA" ;;
+        *)     echo "UNKNOWN" ;;
     esac
 }
 
@@ -585,6 +586,315 @@ get_ca_sample() {
     ')"
 
     printf "%s|%s|%s|%s\n" "${ACTIVE:-0}" "${TOTAL:-0}" "${PRIMARY:-n/a}" "${SCELLS:-n/a}"
+}
+
+quoted_field() {
+    PATTERN="$1"
+    awk -F"'" -v pattern="$PATTERN" \
+        '$0 ~ pattern { print $2; exit }'
+}
+
+metric_number() {
+    awk '{
+        value=$1
+        if (value ~ /^-?[0-9]+([.][0-9]+)?$/) {
+            print value
+            found=1
+            exit
+        }
+    }
+    END { if (!found) print "n/a" }'
+}
+
+record_field() {
+    FIELD_NUMBER="$1"
+    awk -F'|' -v field_number="$FIELD_NUMBER" \
+        '{ print $field_number }'
+}
+
+collect_radio_sample() {
+    SERVING="$(get_serving)"
+    SIGNAL="$(qmi --nas-get-signal-info 2>/dev/null || true)"
+    SYSTEM="$(qmi --nas-get-system-info 2>/dev/null || true)"
+    CELL_INFO="$(qmi --nas-get-cell-location-info 2>/dev/null || true)"
+    RF_INFO="$(qmi --nas-get-rf-band-info 2>/dev/null || true)"
+    CA_INFO="$(qmi --nas-get-lte-cphy-ca-info 2>/dev/null || true)"
+
+    REGISTRATION="$(echo "$SERVING" | quoted_field 'Registration state:')"
+    MCC="$(echo "$SERVING" | awk '/Current PLMN:/,/Roaming indicators:/' | quoted_field 'MCC:')"
+    MNC="$(echo "$SERVING" | awk '/Current PLMN:/,/Roaming indicators:/' | quoted_field 'MNC:')"
+    if [ -n "$MNC" ]; then
+        case "$MNC" in
+            [0-9]) MNC="0$MNC" ;;
+        esac
+    fi
+    if [ -n "$MCC" ] && [ -n "$MNC" ]; then
+        SAMPLE_PLMN="${MCC}${MNC}"
+    else
+        SAMPLE_PLMN="n/a"
+    fi
+    CARRIER="$(plmn_name "$SAMPLE_PLMN")"
+
+    TAC="$(echo "$CELL_INFO" | quoted_field 'Tracking Area Code:')"
+    [ -n "$TAC" ] || TAC="$(echo "$SERVING" | quoted_field 'LTE tracking area code:')"
+    ECI="$(echo "$CELL_INFO" | quoted_field 'Global Cell ID:')"
+    [ -n "$ECI" ] || ECI="$(echo "$SERVING" | quoted_field '3GPP cell ID:')"
+
+    ENODEB="n/a"
+    SECTOR="n/a"
+    case "$ECI" in
+        ''|*[!0-9]*) ;;
+        *)
+            ECI_PARTS="$(awk -v eci="$ECI" 'BEGIN {
+                enodeb=int(eci / 256)
+                sector=eci - (enodeb * 256)
+                printf "%.0f|%.0f\n", enodeb, sector
+            }')"
+            ENODEB="$(echo "$ECI_PARTS" | record_field 1)"
+            SECTOR="$(echo "$ECI_PARTS" | record_field 2)"
+            ;;
+    esac
+
+    LTE_PCI="$(echo "$CELL_INFO" | quoted_field 'Physical Cell ID:')"
+    [ -n "$LTE_PCI" ] || LTE_PCI="$(echo "$CELL_INFO" | quoted_field 'Serving Cell ID:')"
+    LTE_EARFCN="$(echo "$CELL_INFO" | quoted_field 'EUTRA Absolute RF Channel Number:')"
+
+    LTE_BAND="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /LTE Band:/{print $2; exit}')"
+    [ -n "$LTE_BAND" ] || LTE_BAND="$(echo "$RF_INFO" | quoted_field 'Active Band Class:')"
+    LTE_BANDWIDTH="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /DL Bandwidth:/{print $2; exit}')"
+
+    LTE_RSRP="$(echo "$SIGNAL" | awk '/LTE:/,/^$/' | quoted_field 'RSRP:' | metric_number)"
+    LTE_RSRQ="$(echo "$SIGNAL" | awk '/LTE:/,/^$/' | quoted_field 'RSRQ:' | metric_number)"
+    LTE_SNR="$(echo "$SIGNAL" | awk '/LTE:/,/^$/' | quoted_field 'SNR:' | metric_number)"
+    NR_RSRP="$(echo "$SIGNAL" | awk '/5G:/,/^$/' | quoted_field 'RSRP:' | metric_number)"
+    NR_RSRQ="$(echo "$SIGNAL" | awk '/5G:/,/^$/' | quoted_field 'RSRQ:' | metric_number)"
+    NR_SNR="$(echo "$SIGNAL" | awk '/5G:/,/^$/' | quoted_field 'SNR:' | metric_number)"
+
+    NR_ARFCN="$(echo "$CELL_INFO" | quoted_field '5GNR ARFCN:')"
+    NR_BAND="$(echo "$CELL_INFO" | quoted_field '5GNR Band:')"
+    NR_PCI="$(echo "$CELL_INFO" | quoted_field '5GNR Physical Cell ID:')"
+    NR_NCI="$(echo "$CELL_INFO" | quoted_field '5GNR Global Cell ID:')"
+    NSA_STATUS="$(echo "$SYSTEM" | quoted_field '5G NSA Available:')"
+
+    CA_ACTIVE="$(echo "$CA_INFO" | grep -c "State: 'activated'" 2>/dev/null)"
+    CA_PRIMARY="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /LTE Band:/{band=$2} p && /RX Channel:/{channel=$2} p && band!="" && channel!="" {print band "@" channel; exit}')"
+    CA_SCELLS="$(echo "$CA_INFO" | awk -F"'" '
+        /Secondary Cell [0-9]+ Info/ { sec=1; band=""; channel=""; state=""; next }
+        sec && /LTE Band:/ { band=$2 }
+        sec && /RX Channel:/ { channel=$2 }
+        sec && /State:/ {
+            state=$2
+            if (out != "") out=out ","
+            out=out band "@" channel ":" state
+            sec=0
+        }
+        END { print out }
+    ')"
+
+    printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' \
+        "${SAMPLE_PLMN:-n/a}" "${CARRIER:-UNKNOWN}" "${MCC:-n/a}" "${MNC:-n/a}" \
+        "${REGISTRATION:-n/a}" "${TAC:-n/a}" "${ECI:-n/a}" "$ENODEB" "$SECTOR" \
+        "${LTE_PCI:-n/a}" "${LTE_EARFCN:-n/a}" "${LTE_BAND:-n/a}" "${LTE_BANDWIDTH:-n/a}" \
+        "$LTE_RSRP" "$LTE_RSRQ" "$LTE_SNR" "${NR_ARFCN:-n/a}" "${NR_BAND:-n/a}" \
+        "${NR_PCI:-n/a}" "${NR_NCI:-n/a}" "$NR_RSRP" "$NR_RSRQ" "$NR_SNR" \
+        "${NSA_STATUS:-n/a}" "${CA_ACTIVE:-0}" "${CA_PRIMARY:-n/a}" "${CA_SCELLS:-n/a}"
+}
+
+cells_summary() {
+    SAMPLE="$(collect_radio_sample)"
+
+    separator
+    echo "SERVING CELL INTELLIGENCE"
+    separator
+    printf '%-24s %s\n' "Carrier:" "$(echo "$SAMPLE" | record_field 2)"
+    printf '%-24s %s\n' "PLMN:" "$(echo "$SAMPLE" | record_field 1)"
+    printf '%-24s %s\n' "MCC:" "$(echo "$SAMPLE" | record_field 3)"
+    printf '%-24s %s\n' "MNC:" "$(echo "$SAMPLE" | record_field 4)"
+    printf '%-24s %s\n' "Registration:" "$(echo "$SAMPLE" | record_field 5)"
+    printf '%-24s %s\n' "LTE TAC:" "$(echo "$SAMPLE" | record_field 6)"
+    printf '%-24s %s\n' "LTE ECI / Cell ID:" "$(echo "$SAMPLE" | record_field 7)"
+    printf '%-24s %s\n' "LTE eNodeB ID:*" "$(echo "$SAMPLE" | record_field 8)"
+    printf '%-24s %s\n' "LTE sector ID:*" "$(echo "$SAMPLE" | record_field 9)"
+    printf '%-24s %s\n' "LTE PCI:" "$(echo "$SAMPLE" | record_field 10)"
+    printf '%-24s %s\n' "LTE EARFCN:" "$(echo "$SAMPLE" | record_field 11)"
+    printf '%-24s %s\n' "LTE band:" "$(echo "$SAMPLE" | record_field 12)"
+    printf '%-24s %s\n' "LTE bandwidth:" "$(echo "$SAMPLE" | record_field 13)"
+    printf '%-24s %s dBm\n' "LTE RSRP:" "$(echo "$SAMPLE" | record_field 14)"
+    printf '%-24s %s dB\n' "LTE RSRQ:" "$(echo "$SAMPLE" | record_field 15)"
+    printf '%-24s %s dB\n' "LTE SNR:" "$(echo "$SAMPLE" | record_field 16)"
+    printf '%-24s %s\n' "NR ARFCN:" "$(echo "$SAMPLE" | record_field 17)"
+    printf '%-24s %s\n' "NR band:" "$(echo "$SAMPLE" | record_field 18)"
+    printf '%-24s %s\n' "NR PCI:" "$(echo "$SAMPLE" | record_field 19)"
+    printf '%-24s %s\n' "NR NCI / Cell ID:" "$(echo "$SAMPLE" | record_field 20)"
+    printf '%-24s %s dBm\n' "NR RSRP:" "$(echo "$SAMPLE" | record_field 21)"
+    printf '%-24s %s dB\n' "NR RSRQ:" "$(echo "$SAMPLE" | record_field 22)"
+    printf '%-24s %s dB\n' "NR SNR:" "$(echo "$SAMPLE" | record_field 23)"
+    printf '%-24s %s\n' "5G NSA available:" "$(echo "$SAMPLE" | record_field 24)"
+    printf '%-24s %s\n' "Active LTE SCells:" "$(echo "$SAMPLE" | record_field 25)"
+    printf '%-24s %s\n' "Primary LTE carrier:" "$(echo "$SAMPLE" | record_field 26)"
+    printf '%-24s %s\n' "Observed LTE SCells:" "$(echo "$SAMPLE" | record_field 27)"
+    echo
+    echo "* Calculated from a decimal ECI using the common LTE layout"
+    echo "  (eNodeB = ECI >> 8, sector = ECI & 255); operator layouts may differ."
+}
+
+tower_id() {
+    SAMPLE="$(collect_radio_sample)"
+    PLMN="$(echo "$SAMPLE" | record_field 1)"
+    TAC="$(echo "$SAMPLE" | record_field 6)"
+    ECI="$(echo "$SAMPLE" | record_field 7)"
+    ENODEB="$(echo "$SAMPLE" | record_field 8)"
+    SECTOR="$(echo "$SAMPLE" | record_field 9)"
+    LTE_PCI="$(echo "$SAMPLE" | record_field 10)"
+    LTE_EARFCN="$(echo "$SAMPLE" | record_field 11)"
+    LTE_BAND="$(echo "$SAMPLE" | record_field 12)"
+    NR_ARFCN="$(echo "$SAMPLE" | record_field 17)"
+    NR_PCI="$(echo "$SAMPLE" | record_field 19)"
+    NR_NCI="$(echo "$SAMPLE" | record_field 20)"
+
+    separator
+    echo "TOWER LOOKUP IDENTIFIERS"
+    separator
+    printf '%-18s %s\n' "PLMN:" "$PLMN"
+    printf '%-18s %s\n' "TAC:" "$TAC"
+    printf '%-18s %s\n' "ECI / Cell ID:" "$ECI"
+    printf '%-18s %s\n' "eNodeB ID:*" "$ENODEB"
+    printf '%-18s %s\n' "Sector ID:*" "$SECTOR"
+    printf '%-18s %s\n' "LTE PCI:" "$LTE_PCI"
+    printf '%-18s %s\n' "LTE EARFCN:" "$LTE_EARFCN"
+    printf '%-18s %s\n' "LTE band:" "$LTE_BAND"
+    printf '%-18s %s\n' "NR ARFCN:" "$NR_ARFCN"
+    printf '%-18s %s\n' "NR PCI:" "$NR_PCI"
+    printf '%-18s %s\n' "NR NCI / Cell ID:" "$NR_NCI"
+    echo
+    echo "Fingerprint: $PLMN TAC=$TAC ECI=$ECI eNB=$ENODEB sector=$SECTOR PCI=$LTE_PCI EARFCN=$LTE_EARFCN NR-ARFCN=$NR_ARFCN"
+    echo
+    echo "* Calculated from a decimal ECI using the common LTE layout; operator layouts may differ."
+    echo "No external database or Internet lookup was performed."
+}
+
+report_sample_changes() {
+    CURRENT="$1"
+    PREVIOUS="$2"
+    [ -n "$PREVIOUS" ] || return 0
+
+    for CHANGE_SPEC in '1:PLMN' '10:LTE PCI' '11:LTE EARFCN' '7:LTE ECI' '17:NR ARFCN' '19:NR PCI'
+    do
+        FIELD="${CHANGE_SPEC%%:*}"
+        LABEL="${CHANGE_SPEC#*:}"
+        OLD="$(echo "$PREVIOUS" | record_field "$FIELD")"
+        NEW="$(echo "$CURRENT" | record_field "$FIELD")"
+        if [ "$OLD" != "$NEW" ]; then
+            echo "CHANGE: $LABEL $OLD -> $NEW"
+        fi
+    done
+}
+
+watch_radio() {
+    DURATION="${1:-60}"
+    validate_duration "$DURATION"
+    ELAPSED=0
+    PREVIOUS=""
+
+    trap 'echo; echo "Monitor stopped."; exit 0' INT TERM
+    echo "Read-only radio monitor: ${DURATION}s, ${RADIO_POLL_INTERVAL}s interval"
+    echo "Timestamp           PLMN   LTE RSRP RSRQ SNR PCI EARFCN | NR RSRP RSRQ SNR ARFCN | SCells"
+
+    while [ "$ELAPSED" -lt "$DURATION" ]; do
+        SAMPLE="$(collect_radio_sample)"
+        NOW="$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null)"
+        printf '%-19s %-6s %8s %4s %4s %3s %6s | %7s %4s %4s %6s | %s\n' \
+            "$NOW" "$(echo "$SAMPLE" | record_field 1)" \
+            "$(echo "$SAMPLE" | record_field 14)" "$(echo "$SAMPLE" | record_field 15)" \
+            "$(echo "$SAMPLE" | record_field 16)" "$(echo "$SAMPLE" | record_field 10)" \
+            "$(echo "$SAMPLE" | record_field 11)" "$(echo "$SAMPLE" | record_field 21)" \
+            "$(echo "$SAMPLE" | record_field 22)" "$(echo "$SAMPLE" | record_field 23)" \
+            "$(echo "$SAMPLE" | record_field 17)" "$(echo "$SAMPLE" | record_field 25)"
+        report_sample_changes "$SAMPLE" "$PREVIOUS"
+        PREVIOUS="$SAMPLE"
+        ELAPSED=$((ELAPSED + RADIO_POLL_INTERVAL))
+        [ "$ELAPSED" -ge "$DURATION" ] || sleep "$RADIO_POLL_INTERVAL"
+    done
+    trap - INT TERM
+}
+
+print_stability_metric() {
+    LABEL="$1"
+    FIELD="$2"
+    awk -F'|' -v label="$LABEL" -v field="$FIELD" '
+        $field ~ /^-?[0-9]+([.][0-9]+)?$/ {
+            value=$field + 0
+            if (count == 0 || value < min) min=value
+            if (count == 0 || value > max) max=value
+            sum+=value
+            count++
+        }
+        END {
+            printf "%-10s ", label ":"
+            if (count == 0) print "n/a (no modem samples)"
+            else printf "avg=%.2f min=%.2f max=%.2f range=%.2f samples=%d\n", sum/count, min, max, max-min, count
+        }
+    ' "$STABILITY_FILE"
+}
+
+stability_summary() {
+    DURATION="${1:-60}"
+    validate_duration "$DURATION"
+    STABILITY_FILE="${TMPDIR:-/tmp}/cellnet-stability.$$"
+    : > "$STABILITY_FILE" || die "Unable to create temporary sample file."
+    trap 'rm -f "$STABILITY_FILE"; echo; echo "Stability sampling stopped."; exit 0' INT TERM
+    ELAPSED=0
+    SAMPLE_COUNT=0
+    PLMN_CHANGES=0
+    CELL_CHANGES=0
+    PCI_CHANGES=0
+    EARFCN_CHANGES=0
+    NR_ARFCN_CHANGES=0
+    MAX_SCELLS=0
+    PREVIOUS=""
+
+    echo "Collecting read-only RF samples for ${DURATION}s..."
+    while [ "$ELAPSED" -lt "$DURATION" ]; do
+        SAMPLE="$(collect_radio_sample)"
+        echo "$SAMPLE" >> "$STABILITY_FILE"
+        SAMPLE_COUNT=$((SAMPLE_COUNT + 1))
+        ACTIVE_SCELLS="$(echo "$SAMPLE" | record_field 25)"
+        case "$ACTIVE_SCELLS" in
+            ''|*[!0-9]*) ;;
+            *) [ "$ACTIVE_SCELLS" -le "$MAX_SCELLS" ] || MAX_SCELLS="$ACTIVE_SCELLS" ;;
+        esac
+        if [ -n "$PREVIOUS" ]; then
+            [ "$(echo "$SAMPLE" | record_field 1)" = "$(echo "$PREVIOUS" | record_field 1)" ] || PLMN_CHANGES=$((PLMN_CHANGES + 1))
+            [ "$(echo "$SAMPLE" | record_field 7)" = "$(echo "$PREVIOUS" | record_field 7)" ] || CELL_CHANGES=$((CELL_CHANGES + 1))
+            [ "$(echo "$SAMPLE" | record_field 10)" = "$(echo "$PREVIOUS" | record_field 10)" ] || PCI_CHANGES=$((PCI_CHANGES + 1))
+            [ "$(echo "$SAMPLE" | record_field 11)" = "$(echo "$PREVIOUS" | record_field 11)" ] || EARFCN_CHANGES=$((EARFCN_CHANGES + 1))
+            [ "$(echo "$SAMPLE" | record_field 17)" = "$(echo "$PREVIOUS" | record_field 17)" ] || NR_ARFCN_CHANGES=$((NR_ARFCN_CHANGES + 1))
+        fi
+        PREVIOUS="$SAMPLE"
+        ELAPSED=$((ELAPSED + RADIO_POLL_INTERVAL))
+        [ "$ELAPSED" -ge "$DURATION" ] || sleep "$RADIO_POLL_INTERVAL"
+    done
+
+    echo
+    separator
+    echo "RF STABILITY SUMMARY"
+    separator
+    printf '%-24s %s\n' "Samples:" "$SAMPLE_COUNT"
+    print_stability_metric "LTE RSRP" 14
+    print_stability_metric "LTE RSRQ" 15
+    print_stability_metric "LTE SNR" 16
+    print_stability_metric "NR RSRP" 21
+    print_stability_metric "NR RSRQ" 22
+    print_stability_metric "NR SNR" 23
+    printf '%-24s %s\n' "PLMN changes:" "$PLMN_CHANGES"
+    printf '%-24s %s\n' "LTE cell changes:" "$CELL_CHANGES"
+    printf '%-24s %s\n' "LTE PCI changes:" "$PCI_CHANGES"
+    printf '%-24s %s\n' "LTE EARFCN changes:" "$EARFCN_CHANGES"
+    printf '%-24s %s\n' "NR ARFCN changes:" "$NR_ARFCN_CHANGES"
+    printf '%-24s %s\n' "Max active LTE SCells:" "$MAX_SCELLS"
+
+    rm -f "$STABILITY_FILE"
+    trap - INT TERM
 }
 
 get_speedtest_phase() {
@@ -1391,6 +1701,20 @@ Usage:
   $0 rf
       Show bands, LTE CA, serving cell and signal information.
 
+  $0 cells
+      Show a normalized serving-cell and radio summary.
+
+  $0 tower-id
+      Show identifiers for external tower correlation without an Internet lookup.
+
+  $0 watch [seconds]
+      Monitor RF and cell changes without generating data traffic.
+      Default duration: 60 seconds.
+
+  $0 stability [seconds]
+      Summarize RF ranges and cell changes without a speed test.
+      Default duration: 60 seconds.
+
   $0 preferences
       Show current network/RAT preferences.
 
@@ -1429,6 +1753,10 @@ Examples:
   $0 vivo
   $0 status
   $0 rf
+  $0 cells
+  $0 tower-id
+  $0 watch 60
+  $0 stability 60
   $0 speedtest
   $0 speedtest 15
   $0 speedtest-fixed 15
@@ -1506,6 +1834,22 @@ case "$CMD" in
 
     rf)
         rf_status
+        ;;
+
+    cells)
+        cells_summary
+        ;;
+
+    tower-id)
+        tower_id
+        ;;
+
+    watch)
+        watch_radio "${ARG2:-60}"
+        ;;
+
+    stability)
+        stability_summary "${ARG2:-60}"
         ;;
 
     preferences)
