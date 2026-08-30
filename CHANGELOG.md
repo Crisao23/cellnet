@@ -1,6 +1,7 @@
 # Changelog
 
 ## v9.5.0-radio-intelligence
+- Completed the English-language cleanup for remaining source comments, headings and CLI messages.
 - Added `cells` for normalized serving-cell, LTE/NR RF and LTE CA diagnostics.
 - Added `tower-id` with a compact correlation fingerprint and conservative decimal ECI decomposition.
 - Added read-only `watch` monitoring with explicit PLMN/cell/channel change reporting.

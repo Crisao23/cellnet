@@ -2,7 +2,7 @@
 #
 # cellnet - Carrier control and diagnostics for the UniFi U5G Max Outdoor
 #
-# Ambiente validado:
+# Validated environment:
 #   PRODUCT:  U5G-Max-Outdoor
 #   Firmware: 7.5.3
 #   qmicli:   1.38.0
@@ -217,7 +217,7 @@ wait_5g_nsa() {
 
     echo
     echo "WARNING: 5G NSA did not become active within ${NSA_WAIT_MAX}s."
-    echo "Continuando com LTE."
+    echo "Continuing with LTE."
     return 1
 }
 
@@ -298,7 +298,7 @@ short_status() {
     printf "%-18s %s\n" "Registration:" "${REG:-unknown}"
     printf "%-18s %s\n" "Carrier:" "$NAME"
     printf "%-18s %s\n" "PLMN:" "${PLMN:-unknown}"
-    printf "%-18s %s\n" "RAT principal:" "${RAT:-unknown}"
+    printf "%-18s %s\n" "Primary RAT:" "${RAT:-unknown}"
     printf "%-18s %s\n" "Roaming:" "${ROAM:-unknown}"
 }
 
@@ -318,14 +318,14 @@ cell_status() {
 
 radio_status() {
     separator
-    echo "SERVICOS LTE / 5G"
+    echo "LTE / 5G SERVICES"
     separator
     qmi --nas-get-system-info
 }
 
 rf_status() {
     separator
-    echo "RF / BANDAS / CARRIER AGGREGATION"
+    echo "RF / BANDS / CARRIER AGGREGATION"
     separator
 
     echo
@@ -355,7 +355,7 @@ preferences() {
 scan_networks() {
     separator
     echo "CARRIER SCAN"
-    echo "Pode levar algum tempo..."
+    echo "This may take some time..."
     separator
     qmi --nas-network-scan
 }
@@ -396,7 +396,7 @@ snapshot() {
     echo
     separator
     echo "SNAPSHOT: $LABEL"
-    echo "Data: $NOW"
+    echo "Date: $NOW"
     echo "Carrier: $NAME"
     echo "PLMN: $PLMN"
     separator
@@ -1193,7 +1193,7 @@ speedtest_warmup() {
 
     echo "Warm-up returned rc=$RC; continuing with the main test."
     [ -n "$ERR" ] && echo "Warm-up error: $ERR"
-    [ -n "$LAST" ] && echo "Warm-up ultimo evento: $LAST"
+    [ -n "$LAST" ] && echo "Warm-up last event: $LAST"
     return 0
 }
 
@@ -1221,18 +1221,18 @@ speedtest_capture_once() {
     RX_AFTER="$(cat "/sys/class/net/$WWAN_IF/statistics/rx_bytes" 2>/dev/null)"
     TX_AFTER="$(cat "/sys/class/net/$WWAN_IF/statistics/tx_bytes" 2>/dev/null)"
 
-    # Sucesso normal do ui-speed.
+    # Normal ui-speed success.
     FINAL="$(echo "$OUT" | grep '"state":5' | tail -n 1)"
     STATUS="OK"
 
     # If there is no state=5, preserve the latest partial result (state=7)
-    # em vez de jogar fora os dados uteis.
+    # instead of discarding useful data.
     if [ -z "$FINAL" ]; then
         FINAL="$(echo "$OUT" | grep '"state":7' | tail -n 1)"
         [ -n "$FINAL" ] && STATUS="PARTIAL"
     fi
 
-    # Ultimo recurso: linha mais recente que possua down/up.
+    # Last resort: use the latest line containing down/up values.
     if [ -z "$FINAL" ]; then
         FINAL="$(echo "$OUT" | grep -E '"down":[0-9]+|"up":[0-9]+' | tail -n 1)"
         [ -n "$FINAL" ] && STATUS="PARTIAL"
@@ -1889,7 +1889,7 @@ case "$CMD" in
         ;;
 
     *)
-        echo "Opcao desconhecida: $CMD"
+        echo "Unknown option: $CMD"
         usage
         exit 1
         ;;
