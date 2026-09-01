@@ -2,6 +2,8 @@
 
 `cellnet` is a diagnostic and network-selection utility for the **Ubiquiti UniFi U5G Max Outdoor**, originally created for multi-network eSIM environments where a single eSIM can register on different mobile operators.
 
+![cellnet overview: commands flow through the POSIX shell utility to QMI modem control and cellular diagnostics](docs/assets/cellnet-overview.svg)
+
 The project was developed using a **Hypecon MVNO eSIM in Brazil**, with access to TIM and Vivo networks. In some Brazilian states and depending on service/network availability, Claro may also be available through the same eSIM.
 
 Because the U5G Max Outdoor UI currently does not expose manual host-network selection, `cellnet` uses the modem's QMI interface to inspect the current network, select a specific PLMN, analyze LTE/5G radio conditions and compare real-world performance.

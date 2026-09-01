@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title description">
+  <title id="title">cellnet software overview</title>
+  <desc id="description">A diagram showing cellnet connecting user commands to QMI modem controls and cellular diagnostics on the Ubiquiti UniFi U5G Max Outdoor.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081421"/>
+      <stop offset="1" stop-color="#102b3d"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#020617" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#67e8f9"/>
+    </marker>
+    <style>
+      .heading { fill: #f8fafc; font: 700 30px Arial, sans-serif; }
+      .subtitle { fill: #a5f3fc; font: 400 15px Arial, sans-serif; }
+      .box-title { fill: #f8fafc; font: 700 19px Arial, sans-serif; }
+      .box-text { fill: #cbd5e1; font: 400 14px Arial, sans-serif; }
+      .chip { fill: #dbeafe; font: 700 12px Arial, sans-serif; }
+      .connector { fill: none; stroke: #67e8f9; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="520" rx="24" fill="url(#background)"/>
+  <circle cx="1110" cy="60" r="150" fill="#0ea5e9" opacity="0.08"/>
+  <circle cx="70" cy="500" r="170" fill="#22c55e" opacity="0.07"/>
+
+  <text x="60" y="60" class="heading">cellnet</text>
+  <text x="60" y="88" class="subtitle">Cellular diagnostics and controlled network selection for the UniFi U5G Max Outdoor</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="145" width="230" height="210" rx="18" fill="#13283a" stroke="#28536b"/>
+    <circle cx="104" cy="189" r="20" fill="#38bdf8" opacity="0.2"/>
+    <path d="M94 189h20M104 179v20" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/>
+    <text x="136" y="196" class="box-title">User commands</text>
+    <text x="88" y="242" class="box-text">status · signal · cell · rf</text>
+    <text x="88" y="270" class="box-text">watch · stability · snapshot</text>
+    <text x="88" y="298" class="box-text">tim · vivo · auto · compare</text>
+    <text x="88" y="326" class="box-text">speedtest · self-test</text>
+  </g>
+
+  <path class="connector" d="M290 250H430"/>
+
+  <g filter="url(#shadow)">
+    <rect x="430" y="125" width="340" height="250" rx="22" fill="#102f3b" stroke="url(#accent)" stroke-width="2"/>
+    <rect x="458" y="151" width="92" height="28" rx="14" fill="#164e63"/>
+    <text x="474" y="170" class="chip">POSIX sh</text>
+    <text x="458" y="220" class="box-title">cellnet control layer</text>
+    <text x="458" y="257" class="box-text">Reads modem and serving-cell data</text>
+    <text x="458" y="285" class="box-text">Selects PLMN without forcing RAT or bands</text>
+    <text x="458" y="313" class="box-text">Normalizes RF, CA and performance results</text>
+    <text x="458" y="341" class="box-text">Keeps tests bound to the WWAN interface</text>
+  </g>
+
+  <path class="connector" d="M770 250H910"/>
+
+  <g filter="url(#shadow)">
+    <rect x="910" y="145" width="230" height="210" rx="18" fill="#13283a" stroke="#28536b"/>
+    <path d="M950 210q18-24 36 0M958 217q10-13 20 0M968 225h1" fill="none" stroke="#86efac" stroke-width="4" stroke-linecap="round"/>
+    <text x="1000" y="205" class="box-title">QMI modem</text>
+    <text x="938" y="252" class="box-text">U5G Max Outdoor</text>
+    <text x="938" y="280" class="box-text">LTE + 5G NSA</text>
+    <text x="938" y="308" class="box-text">TIM · Vivo · automatic</text>
+    <text x="938" y="336" class="box-text">wwan0 · /dev/wwan0qmi0</text>
+  </g>
+
+  <g>
+    <rect x="153" y="415" width="178" height="38" rx="19" fill="#0c4a6e"/>
+    <text x="181" y="439" class="chip">NETWORK STATUS</text>
+    <rect x="352" y="415" width="150" height="38" rx="19" fill="#14532d"/>
+    <text x="382" y="439" class="chip">RF + LTE CA</text>
+    <rect x="523" y="415" width="170" height="38" rx="19" fill="#4c1d95"/>
+    <text x="552" y="439" class="chip">CELL IDENTITY</text>
+    <rect x="714" y="415" width="160" height="38" rx="19" fill="#713f12"/>
+    <text x="745" y="439" class="chip">SPEED TESTS</text>
+    <rect x="895" y="415" width="152" height="38" rx="19" fill="#7f1d1d"/>
+    <text x="928" y="439" class="chip">COMPARISON</text>
+  </g>
+
+  <text x="600" y="493" text-anchor="middle" class="subtitle">Inspect · compare · select · validate</text>
+</svg>
