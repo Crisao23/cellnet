@@ -12,6 +12,14 @@ Current baseline: **v9.5.0-radio-intelligence**
 
 > This is an independent project and is not affiliated with or endorsed by Ubiquiti, Hypecon, TIM, Vivo or Claro.
 
+## Project disclaimer
+
+`cellnet` is an early-stage, personal project created to address a specific operational need. Its carrier-selection functionality is currently limited by the test environment: development and hardware validation have been performed with a single multi-network eSIM and the operators available through that subscription.
+
+The project still requires broader testing across additional devices, firmware versions, eSIM/SIM providers, operators, regions and network conditions. Behavior outside the documented environment should not be assumed to be validated or universally compatible.
+
+Development and maintenance are performed in limited personal time, so releases, support and feature coverage may be incomplete or progress slowly. Parts of the implementation and documentation were produced through AI-assisted, exploratory “vibe coding” and subsequently reviewed and tested within the available environment. Users should inspect the code, understand the modem operations involved and validate changes in their own environment before relying on it in production.
+
 
 ## Why cellnet exists
 
