@@ -1,6 +1,7 @@
 # Changelog
 
 ## v9.5.0-radio-intelligence
+- Fixed GitHub Actions compatibility across ShellCheck 0.10 and 0.11 by using an inline signal trap handler.
 - Prevented UMTS/3GPP cell IDs and WCDMA bands from being mislabeled as LTE ECI, eNodeB, sector or LTE band.
 - Made speed comparisons return failure and print complete `n/a` records when carrier registration or a constituent speed test fails.
 - Strengthened the on-device tester to detect fabricated LTE fields on a non-LTE serving RAT.

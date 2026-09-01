@@ -205,17 +205,8 @@ cleanup() {
     fi
 }
 
-# Invoked indirectly by the signal traps below.
-# shellcheck disable=SC2329
-interrupted() {
-    echo
-    echo "Test interrupted; running cleanup."
-    cleanup
-    exit 130
-}
-
 trap cleanup 0
-trap interrupted 1 2 15
+trap 'echo; echo "Test interrupted; running cleanup."; cleanup; exit 130' 1 2 15
 
 echo "cellnet on-device test"
 echo "Binary:  $CELLNET_PATH"
