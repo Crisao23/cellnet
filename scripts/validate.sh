@@ -50,7 +50,11 @@ grep -Fq -- '-d both' cellnet || {
 
 if command -v shellcheck >/dev/null 2>&1; then
     echo "Running ShellCheck..."
-    shellcheck -x cellnet bin/cellnet install.sh scripts/validate.sh scripts/test-device.sh
+    # Fail on actionable warnings and errors. Informational/style diagnostics
+    # remain visible when ShellCheck is run manually but do not make CI depend
+    # on the informational rule set shipped by a particular distro release.
+    shellcheck --severity=warning -x \
+        cellnet bin/cellnet install.sh scripts/validate.sh scripts/test-device.sh
 else
     echo "ShellCheck not found; skipping optional local lint." >&2
 fi

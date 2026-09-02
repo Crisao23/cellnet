@@ -916,8 +916,9 @@ location_metrics() {
 tower_lookup() {
     DEVICE_LAT="${1:-${CELLNET_LATITUDE:-}}"
     DEVICE_LON="${2:-${CELLNET_LONGITUDE:-}}"
-    [ -n "$DEVICE_LAT" ] && [ -n "$DEVICE_LON" ] ||
+    if [ -z "$DEVICE_LAT" ] || [ -z "$DEVICE_LON" ]; then
         die "Provide device latitude and longitude or set CELLNET_LATITUDE and CELLNET_LONGITUDE."
+    fi
     validate_coordinate "$DEVICE_LAT" -90 90 "latitude"
     validate_coordinate "$DEVICE_LON" -180 180 "longitude"
 

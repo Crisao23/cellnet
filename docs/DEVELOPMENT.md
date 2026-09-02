@@ -89,6 +89,8 @@ chmod +x /tmp/log/cellnet/cellnet /tmp/log/cellnet/test-device.sh
 /tmp/log/cellnet/test-device.sh
 ```
 
+Repository validation runs ShellCheck at `warning` severity. This keeps errors and actionable warnings blocking while avoiding CI failures caused only by informational rules added or reclassified between distribution-provided ShellCheck versions. Fix informational findings when they identify real ambiguity; do not suppress warnings to bypass a genuine defect.
+
 The default is read-only. Optional modes are `--scan`, `--carrier`, `--speed`, and `--all`. Carrier mode restores automatic selection during cleanup. Speed mode consumes cellular data. Each test captures output, validates an expected marker and writes a PASS/FAIL/SKIP summary under `/tmp/log/cellnet/cellnet-test-*`.
 
 ## Language policy

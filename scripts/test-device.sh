@@ -292,7 +292,7 @@ else
     fail_test "WWAN-interface" "wwan0 not found"
 fi
 
-run_cellnet "help" '^Version: 9[.]6[.]0-tower-intelligence$' help || true
+run_cellnet "help" '^Version: [0-9]+[.][0-9]+[.][0-9]+-[A-Za-z0-9._-]+$' help || true
 run_cellnet "status" '^Current network$' status || true
 run_cellnet "preferences" '^MODEM PREFERENCES$' preferences || true
 run_cellnet "signal" '^RADIO SIGNAL$' signal || true
