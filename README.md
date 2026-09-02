@@ -8,7 +8,7 @@ The project was developed using a **Hypecon MVNO eSIM in Brazil**, with access t
 
 Because the U5G Max Outdoor UI currently does not expose manual host-network selection, `cellnet` uses the modem's QMI interface to inspect the current network, select a specific PLMN, analyze LTE/5G radio conditions and compare real-world performance.
 
-Current baseline: **v9.5.0-radio-intelligence**
+Current baseline: **v9.6.0-tower-intelligence**
 
 > This is an independent project and is not affiliated with or endorsed by Ubiquiti, Hypecon, TIM, Vivo or Claro.
 
@@ -215,6 +215,12 @@ cellnet speedtest
 | `cellnet rf` | Bands, LTE CA, cell and signal summary |
 | `cellnet cells` | Normalized serving-cell, LTE/NR signal and CA summary |
 | `cellnet tower-id` | Identifiers for external tower/ERB correlation |
+| `cellnet neighbors` | Raw read-only QMI serving/neighbor cell inventory |
+| `cellnet tower-export [json\|csv]` | Structured serving-cell identifiers |
+| `cellnet tower-lookup [lat lon]` | OpenCellID coordinates, distance, bearing and confidence |
+| `cellnet observe-cells [seconds]` | Timestamped cell and RF observations as CSV |
+| `cellnet tower-assess lat lon [seconds]` | OpenCellID proximity plus RF stability |
+| `cellnet tower-assess-speed lat lon [seconds]` | Proximity, stability and throughput; consumes data |
 | `cellnet watch [seconds]` | Timestamped read-only RF/cell monitor; default 60 s |
 | `cellnet stability [seconds]` | RF ranges and cell-change counters; default 60 s |
 | `cellnet preferences` | Current modem system-selection preferences |
@@ -290,7 +296,21 @@ state=4 -> upload
 
 `watch` and `stability` poll local QMI data every 3 seconds and do not run `ui-speed` or perform Internet lookups. Fields not explicitly exposed by the modem are shown as `n/a`.
 
-`cells` and `tower-id` calculate eNodeB and sector identifiers only when the modem returns a decimal LTE ECI. The calculation uses the common layout `eNodeB = ECI >> 8` and `sector = ECI & 255`; operator implementations may differ. These calculated identifiers are distinct from modem-derived values. A future tower database match would be an external correlation, not a modem GNSS position. GNSS/location commands are not implemented in this release.
+`cells` and `tower-id` calculate eNodeB and sector identifiers only when the modem returns a decimal LTE ECI. The calculation uses the common layout `eNodeB = ECI >> 8` and `sector = ECI & 255`; operator implementations may differ. These calculated identifiers are distinct from modem-derived values. An OpenCellID match is an external correlation, not a modem GNSS position. Modem GNSS commands are not implemented in this release.
+
+### Optional OpenCellID lookup
+
+`tower-lookup` sends the current LTE MCC, MNC, TAC and ECI to OpenCellID. It does not upload RF measurements. Supply the API key and the U5G coordinates at runtime; never commit the key:
+
+```sh
+export OPENCELLID_API_KEY='your-key'
+export CELLNET_LATITUDE='-23.5505'
+export CELLNET_LONGITUDE='-46.6333'
+cellnet tower-lookup
+cellnet tower-assess -23.5505 -46.6333 60
+```
+
+OpenCellID coordinates are crowdsourced estimates and may identify a cell coverage centroid rather than the physical mast. Availability and usage are subject to the OpenCellID API policy. When `wget` is used as the HTTP fallback, the key may be temporarily visible to local process inspection; `curl` is preferred.
 
 ## Data usage
 

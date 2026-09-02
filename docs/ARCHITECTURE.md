@@ -32,10 +32,10 @@ The layers are intentionally distinct:
 
 1. modem-derived values are labels returned by QMI;
 2. LTE eNodeB/sector values are calculated from a decimal ECI using the common LTE layout;
-3. future tower coordinates would be external database correlations;
-4. device coordinates would require a separately validated GNSS fix.
+3. optional tower coordinates are external OpenCellID correlations;
+4. device coordinates are explicit user input and must be independently validated.
 
-The last two layers are not implemented. External tower coordinates must never be represented as modem GNSS coordinates.
+External tower coordinates are optionally correlated through OpenCellID using LTE MCC, MNC, TAC and ECI. Device coordinates remain explicit user input; neither value is represented as a modem GNSS fix. Direct cell locking is not implemented.
 
 ### Internal result record
 Speed-test results are serialized into a positional pipe-delimited record. This is a compatibility boundary: changing field order or field count requires updating every parser/consumer.

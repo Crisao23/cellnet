@@ -33,8 +33,9 @@ NSA_STABILIZE=8
 SPEEDTEST_DURATION=10
 SPEEDTEST_SERVER="http://103.14.27.177:80"
 SPEEDTEST_MODE_DEFAULT="auto"
-CELLNET_BASELINE_VERSION="9.5.0-radio-intelligence"
+CELLNET_BASELINE_VERSION="9.6.0-tower-intelligence"
 RADIO_POLL_INTERVAL=3
+OPENCELLID_ENDPOINT="${OPENCELLID_ENDPOINT:-https://opencellid.org/cell/get}"
 SPEEDTEST_MONITOR_INTERVAL=3
 SPEEDTEST_RETRIES=1
 SPEEDTEST_RETRY_WAIT=10
@@ -790,6 +791,228 @@ tower_id() {
     echo "* Calculated from a decimal ECI using the common LTE layout; operator layouts may differ."
     [ "$SAMPLE_RAT" = "lte" ] || echo "LTE identifiers are n/a because the serving RAT is not LTE."
     echo "No external database or Internet lookup was performed."
+}
+
+neighbors() {
+    separator
+    echo "NEIGHBORING CELL INFORMATION"
+    separator
+    echo "Read-only QMI cell-location response."
+    echo "Fields depend on modem firmware and serving RAT."
+    echo
+    qmi --nas-get-cell-location-info 2>&1 ||
+        die "Unable to obtain neighboring cell information."
+}
+
+tower_export() {
+    FORMAT="${1:-json}"
+    SAMPLE="$(collect_radio_sample)"
+
+    case "$FORMAT" in
+        json)
+            printf '{\n'
+            printf '  "plmn": "%s",\n' "$(echo "$SAMPLE" | record_field 1)"
+            printf '  "carrier": "%s",\n' "$(echo "$SAMPLE" | record_field 2)"
+            printf '  "mcc": "%s",\n' "$(echo "$SAMPLE" | record_field 3)"
+            printf '  "mnc": "%s",\n' "$(echo "$SAMPLE" | record_field 4)"
+            printf '  "rat": "%s",\n' "$(echo "$SAMPLE" | record_field 28)"
+            printf '  "tac": "%s",\n' "$(echo "$SAMPLE" | record_field 6)"
+            printf '  "eci": "%s",\n' "$(echo "$SAMPLE" | record_field 7)"
+            printf '  "enodeb": "%s",\n' "$(echo "$SAMPLE" | record_field 8)"
+            printf '  "sector": "%s",\n' "$(echo "$SAMPLE" | record_field 9)"
+            printf '  "lte_pci": "%s",\n' "$(echo "$SAMPLE" | record_field 10)"
+            printf '  "lte_earfcn": "%s",\n' "$(echo "$SAMPLE" | record_field 11)"
+            printf '  "lte_band": "%s",\n' "$(echo "$SAMPLE" | record_field 12)"
+            printf '  "nr_arfcn": "%s",\n' "$(echo "$SAMPLE" | record_field 17)"
+            printf '  "nr_pci": "%s",\n' "$(echo "$SAMPLE" | record_field 19)"
+            printf '  "nr_nci": "%s"\n' "$(echo "$SAMPLE" | record_field 20)"
+            printf '}\n'
+            ;;
+        csv)
+            echo "plmn,carrier,mcc,mnc,rat,tac,eci,enodeb,sector,lte_pci,lte_earfcn,lte_band,nr_arfcn,nr_pci,nr_nci"
+            printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+                "$(echo "$SAMPLE" | record_field 1)" "$(echo "$SAMPLE" | record_field 2)" \
+                "$(echo "$SAMPLE" | record_field 3)" "$(echo "$SAMPLE" | record_field 4)" \
+                "$(echo "$SAMPLE" | record_field 28)" "$(echo "$SAMPLE" | record_field 6)" \
+                "$(echo "$SAMPLE" | record_field 7)" "$(echo "$SAMPLE" | record_field 8)" \
+                "$(echo "$SAMPLE" | record_field 9)" "$(echo "$SAMPLE" | record_field 10)" \
+                "$(echo "$SAMPLE" | record_field 11)" "$(echo "$SAMPLE" | record_field 12)" \
+                "$(echo "$SAMPLE" | record_field 17)" "$(echo "$SAMPLE" | record_field 19)" \
+                "$(echo "$SAMPLE" | record_field 20)"
+            ;;
+        *) die "Unsupported export format: $FORMAT (use json or csv)." ;;
+    esac
+}
+
+validate_coordinate() {
+    VALUE="$1"
+    MINIMUM="$2"
+    MAXIMUM="$3"
+    LABEL="$4"
+    awk -v value="$VALUE" -v minimum="$MINIMUM" -v maximum="$MAXIMUM" \
+        'BEGIN { exit !(value ~ /^-?[0-9]+([.][0-9]+)?$/ && value >= minimum && value <= maximum) }' ||
+        die "Invalid $LABEL: $VALUE"
+}
+
+json_number() {
+    echo "$1" | tr -d '\r\n' |
+        sed -n "s/.*\"$2\"[[:space:]]*:[[:space:]]*\([-0-9.][0-9.]*\).*/\1/p"
+}
+
+json_boolean() {
+    echo "$1" | tr -d '\r\n' |
+        sed -n "s/.*\"$2\"[[:space:]]*:[[:space:]]*\(true\|false\).*/\1/p"
+}
+
+opencellid_error() {
+    RESPONSE_TEXT="$(echo "$1" | tr '\r\n' '  ')"
+    ERROR_TEXT="$(echo "$RESPONSE_TEXT" |
+        sed -n 's/.*"error"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+    [ -n "$ERROR_TEXT" ] || ERROR_TEXT="$(echo "$RESPONSE_TEXT" |
+        sed -n 's/.*"message"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+    [ -n "$ERROR_TEXT" ] || ERROR_TEXT="$(echo "$RESPONSE_TEXT" |
+        sed -n 's/.*info="\([^"]*\)".*/\1/p')"
+    echo "${ERROR_TEXT:-unrecognized provider response}"
+}
+
+opencellid_request() {
+    API_KEY="${OPENCELLID_API_KEY:-}"
+    [ -n "$API_KEY" ] || die "OPENCELLID_API_KEY is not set."
+    case "$API_KEY" in *[!A-Za-z0-9._-]*) die "OPENCELLID_API_KEY contains unsupported characters." ;; esac
+
+    if command -v curl >/dev/null 2>&1; then
+        {
+            printf 'url = "%s"\n' "$OPENCELLID_ENDPOINT"
+            echo 'get'
+            printf 'data-urlencode = "key=%s"\n' "$API_KEY"
+            printf 'data-urlencode = "mcc=%s"\n' "$1"
+            printf 'data-urlencode = "mnc=%s"\n' "$2"
+            printf 'data-urlencode = "lac=%s"\n' "$3"
+            printf 'data-urlencode = "cellid=%s"\n' "$4"
+            printf 'data-urlencode = "radio=%s"\n' "$5"
+            echo 'data-urlencode = "format=json"'
+        } | curl -sS --connect-timeout 10 --max-time 30 -K -
+    elif command -v wget >/dev/null 2>&1; then
+        URL="$OPENCELLID_ENDPOINT?key=$API_KEY&mcc=$1&mnc=$2&lac=$3&cellid=$4&radio=$5&format=json"
+        wget -q -T 30 -O - "$URL"
+    else
+        die "OpenCellID lookup requires curl or wget."
+    fi
+}
+
+location_metrics() {
+    DEVICE_LAT="$1" DEVICE_LON="$2" TOWER_LAT="$3" TOWER_LON="$4"
+    awk -v lat1="$DEVICE_LAT" -v lon1="$DEVICE_LON" -v lat2="$TOWER_LAT" -v lon2="$TOWER_LON" 'BEGIN {
+        pi=atan2(0,-1); r=6371; p1=lat1*pi/180; p2=lat2*pi/180
+        dp=(lat2-lat1)*pi/180; dl=(lon2-lon1)*pi/180
+        a=sin(dp/2)^2 + cos(p1)*cos(p2)*sin(dl/2)^2
+        distance=2*r*atan2(sqrt(a),sqrt(1-a))
+        y=sin(dl)*cos(p2); x=cos(p1)*sin(p2)-sin(p1)*cos(p2)*cos(dl)
+        bearing=atan2(y,x)*180/pi; if (bearing < 0) bearing+=360
+        printf "%.2f|%.1f\n", distance, bearing
+    }'
+}
+
+tower_lookup() {
+    DEVICE_LAT="${1:-${CELLNET_LATITUDE:-}}"
+    DEVICE_LON="${2:-${CELLNET_LONGITUDE:-}}"
+    [ -n "$DEVICE_LAT" ] && [ -n "$DEVICE_LON" ] ||
+        die "Provide device latitude and longitude or set CELLNET_LATITUDE and CELLNET_LONGITUDE."
+    validate_coordinate "$DEVICE_LAT" -90 90 "latitude"
+    validate_coordinate "$DEVICE_LON" -180 180 "longitude"
+
+    SAMPLE="$(collect_radio_sample)"
+    MCC="$(echo "$SAMPLE" | record_field 3)"
+    MNC="$(echo "$SAMPLE" | record_field 4)"
+    TAC="$(echo "$SAMPLE" | record_field 6)"
+    CELL_ID="$(echo "$SAMPLE" | record_field 7)"
+    RAT="$(echo "$SAMPLE" | record_field 28)"
+    [ "$RAT" = "lte" ] || die "OpenCellID lookup currently requires an LTE serving cell."
+    for VALUE in "$MCC" "$MNC" "$TAC" "$CELL_ID"; do
+        case "$VALUE" in ''|n/a|*[!0-9]*) die "Serving-cell identifiers are incomplete." ;; esac
+    done
+
+    RESPONSE="$(opencellid_request "$MCC" "$MNC" "$TAC" "$CELL_ID" LTE)" ||
+        die "OpenCellID lookup failed."
+    TOWER_LAT="$(json_number "$RESPONSE" lat)"
+    TOWER_LON="$(json_number "$RESPONSE" lon)"
+    RANGE="$(json_number "$RESPONSE" range)"
+    SAMPLES="$(json_number "$RESPONSE" samples)"
+    CHANGEABLE="$(json_boolean "$RESPONSE" changeable)"
+    if [ -z "$TOWER_LAT" ] || [ -z "$TOWER_LON" ]; then
+        PROVIDER_ERROR="$(opencellid_error "$RESPONSE")"
+        echo "ERROR: OpenCellID returned no usable coordinates: $PROVIDER_ERROR" >&2
+        return 3
+    fi
+
+    METRICS="$(location_metrics "$DEVICE_LAT" "$DEVICE_LON" "$TOWER_LAT" "$TOWER_LON")"
+    DISTANCE="$(echo "$METRICS" | record_field 1)"
+    BEARING="$(echo "$METRICS" | record_field 2)"
+    CONFIDENCE="low"
+    case "${SAMPLES:-0}:${RANGE:-999999}" in
+        [1-9][0-9]*:[0-9]|[1-9][0-9]*:[0-9][0-9]|[1-9][0-9]*:[0-9][0-9][0-9]) CONFIDENCE="high" ;;
+        [3-9]:*|[1-9][0-9]*:*) CONFIDENCE="medium" ;;
+    esac
+
+    separator
+    echo "OPENCELLID TOWER LOOKUP"
+    separator
+    printf '%-24s %s\n' "Cell:" "$MCC-$MNC TAC=$TAC ECI=$CELL_ID"
+    printf '%-24s %s, %s\n' "Device coordinates:" "$DEVICE_LAT" "$DEVICE_LON"
+    printf '%-24s %s, %s\n' "Tower coordinates:" "$TOWER_LAT" "$TOWER_LON"
+    printf '%-24s %s km\n' "Approximate distance:" "$DISTANCE"
+    printf '%-24s %s degrees\n' "Initial bearing:" "$BEARING"
+    printf '%-24s %s m\n' "Reported range:" "${RANGE:-n/a}"
+    printf '%-24s %s\n' "OpenCellID samples:" "${SAMPLES:-n/a}"
+    printf '%-24s %s\n' "Position calculated:" "${CHANGEABLE:-n/a}"
+    printf '%-24s %s\n' "Correlation confidence:" "$CONFIDENCE"
+    echo
+    echo "Coordinates are provided by OpenCellID and are not a modem GNSS fix."
+}
+
+observe_cells() {
+    DURATION="${1:-60}"
+    validate_duration "$DURATION"
+    echo "timestamp,plmn,rat,tac,eci,enodeb,sector,lte_pci,lte_earfcn,lte_rsrp,lte_rsrq,lte_snr,nr_arfcn,nr_pci,nr_rsrp,nr_rsrq,nr_snr"
+    ELAPSED=0
+    while [ "$ELAPSED" -lt "$DURATION" ]; do
+        SAMPLE="$(collect_radio_sample)"
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+            "$(date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || echo n/a)" \
+            "$(echo "$SAMPLE" | record_field 1)" "$(echo "$SAMPLE" | record_field 28)" \
+            "$(echo "$SAMPLE" | record_field 6)" "$(echo "$SAMPLE" | record_field 7)" \
+            "$(echo "$SAMPLE" | record_field 8)" "$(echo "$SAMPLE" | record_field 9)" \
+            "$(echo "$SAMPLE" | record_field 10)" "$(echo "$SAMPLE" | record_field 11)" \
+            "$(echo "$SAMPLE" | record_field 14)" "$(echo "$SAMPLE" | record_field 15)" \
+            "$(echo "$SAMPLE" | record_field 16)" "$(echo "$SAMPLE" | record_field 17)" \
+            "$(echo "$SAMPLE" | record_field 19)" "$(echo "$SAMPLE" | record_field 21)" \
+            "$(echo "$SAMPLE" | record_field 22)" "$(echo "$SAMPLE" | record_field 23)"
+        sleep "$RADIO_POLL_INTERVAL"
+        ELAPSED=$((ELAPSED + RADIO_POLL_INTERVAL))
+    done
+}
+
+tower_assess() {
+    LATITUDE="$1"
+    LONGITUDE="$2"
+    DURATION="${3:-60}"
+    tower_lookup "$LATITUDE" "$LONGITUDE" || return $?
+    echo
+    stability_summary "$DURATION"
+    echo
+    echo "Assessment combines OpenCellID proximity with local RF stability."
+    echo "Use tower-assess-speed only when cellular data consumption is acceptable."
+}
+
+tower_assess_speed() {
+    LATITUDE="$1"
+    LONGITUDE="$2"
+    DURATION="${3:-$SPEEDTEST_DURATION}"
+    tower_lookup "$LATITUDE" "$LONGITUDE" || return $?
+    echo
+    stability_summary "$DURATION"
+    echo
+    speedtest_current "$DURATION"
 }
 
 report_sample_changes() {
@@ -1755,6 +1978,26 @@ Usage:
   $0 tower-id
       Show identifiers for external tower correlation without an Internet lookup.
 
+  $0 neighbors
+      Show the modem's read-only cell-location and neighboring-cell response.
+
+  $0 tower-export [json|csv]
+      Export serving-cell identifiers in a structured format.
+
+  $0 tower-lookup [latitude longitude]
+      Query OpenCellID for the current LTE cell and calculate distance/bearing.
+      Requires OPENCELLID_API_KEY and device coordinates as arguments or via
+      CELLNET_LATITUDE and CELLNET_LONGITUDE.
+
+  $0 observe-cells [seconds]
+      Emit timestamped serving-cell and RF samples as CSV.
+
+  $0 tower-assess latitude longitude [seconds]
+      Combine OpenCellID proximity with a read-only RF stability summary.
+
+  $0 tower-assess-speed latitude longitude [seconds]
+      Add a cellular speed test to tower-assess. Consumes cellular data.
+
   $0 watch [seconds]
       Monitor RF and cell changes without generating data traffic.
       Default duration: 60 seconds.
@@ -1803,6 +2046,11 @@ Examples:
   $0 rf
   $0 cells
   $0 tower-id
+  $0 neighbors
+  $0 tower-export json
+  $0 tower-lookup -23.5505 -46.6333
+  $0 observe-cells 180
+  $0 tower-assess -23.5505 -46.6333 60
   $0 watch 60
   $0 stability 60
   $0 speedtest
@@ -1846,6 +2094,8 @@ check_requirements
 
 CMD="${1:-help}"
 ARG2="${2:-}"
+ARG3="${3:-}"
+ARG4="${4:-}"
 
 case "$CMD" in
     tim)
@@ -1890,6 +2140,30 @@ case "$CMD" in
 
     tower-id)
         tower_id
+        ;;
+
+    neighbors)
+        neighbors
+        ;;
+
+    tower-export)
+        tower_export "${ARG2:-json}"
+        ;;
+
+    tower-lookup)
+        tower_lookup "$ARG2" "$ARG3"
+        ;;
+
+    observe-cells)
+        observe_cells "${ARG2:-60}"
+        ;;
+
+    tower-assess)
+        tower_assess "$ARG2" "$ARG3" "$ARG4"
+        ;;
+
+    tower-assess-speed)
+        tower_assess_speed "$ARG2" "$ARG3" "$ARG4"
         ;;
 
     watch)

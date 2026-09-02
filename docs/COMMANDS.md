@@ -43,6 +43,24 @@ Decimal LTE ECI values are also decomposed using the common LTE layout (`eNodeB 
 ### `cellnet tower-id`
 Prints TAC, ECI, calculated eNodeB/sector, PCI, EARFCN and available NR identifiers, plus a compact lookup fingerprint. It does not contact ANATEL, another tower database, or the Internet.
 
+### `cellnet neighbors`
+Prints the complete read-only QMI cell-location response. Neighbor fields vary by modem state, firmware and RAT, so the command deliberately preserves the modem labels instead of guessing a normalized identity.
+
+### `cellnet tower-export [json|csv]`
+Exports the normalized serving-cell identity without performing an Internet lookup. The default format is JSON; CSV is suitable for observation logs and external analysis.
+
+### `cellnet tower-lookup [latitude longitude]`
+Queries the OpenCellID `/cell/get` endpoint for the current LTE MCC, MNC, TAC and ECI. The API key is read from `OPENCELLID_API_KEY`. Device coordinates may be passed as arguments or through `CELLNET_LATITUDE` and `CELLNET_LONGITUDE`. The result includes approximate distance, initial bearing, OpenCellID range/sample metadata and a conservative correlation-confidence label.
+
+### `cellnet observe-cells [seconds]`
+Emits timestamped serving-cell and RF samples as CSV every three seconds. It is read-only and suitable for recording handovers or antenna-orientation tests.
+
+### `cellnet tower-assess latitude longitude [seconds]`
+Runs `tower-lookup` followed by the existing read-only stability summary. It compares proximity with actual RF stability rather than treating the closest reported cell as automatically best.
+
+### `cellnet tower-assess-speed latitude longitude [seconds]`
+Adds the existing interface-bound bidirectional speed test to the tower assessment. This command consumes cellular data.
+
 ### `cellnet watch [seconds]`
 Runs a timestamped, read-only QMI monitor. The default duration is 60 seconds and the polling interval is 3 seconds. It shows LTE/NR RF values, channels, PLMN and active LTE SCells, and reports changes in PLMN, LTE ECI/PCI/EARFCN and available NR ARFCN/PCI fields. Ctrl+C stops the monitor cleanly.
 

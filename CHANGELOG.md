@@ -1,5 +1,14 @@
 # Changelog
 
+## 9.6.0-tower-intelligence
+
+- Added read-only neighboring-cell output and structured tower identifier export.
+- Added optional OpenCellID LTE lookup without storing credentials in the repository.
+- Added manual U5G coordinates, distance, bearing and conservative match confidence.
+- Added timestamped cell observation and combined proximity/RF/throughput assessments.
+- Preserved sanitized OpenCellID errors and treated missing third-party cell data as an optional-test skip.
+- Preserved PLMN-only carrier selection and avoided cell, RAT or band locking.
+
 ## v9.5.0-radio-intelligence
 - Fixed GitHub Actions compatibility across ShellCheck 0.10 and 0.11 by using an inline signal trap handler.
 - Prevented UMTS/3GPP cell IDs and WCDMA bands from being mislabeled as LTE ECI, eNodeB, sector or LTE band.

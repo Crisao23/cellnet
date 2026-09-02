@@ -8,6 +8,7 @@ CELLNET_PATH="${CELLNET_BIN:-$DEVICE_DIR/cellnet}"
 WATCH_SECONDS="${CELLNET_TEST_WATCH_SECONDS:-9}"
 STABILITY_SECONDS="${CELLNET_TEST_STABILITY_SECONDS:-9}"
 SPEED_SECONDS="${CELLNET_TEST_SPEED_SECONDS:-10}"
+OBSERVE_SECONDS="${CELLNET_TEST_OBSERVE_SECONDS:-6}"
 
 RUN_SCAN=0
 RUN_CARRIER=0
@@ -35,6 +36,10 @@ Environment overrides:
   CELLNET_TEST_WATCH_SECONDS      Default: 9
   CELLNET_TEST_STABILITY_SECONDS  Default: 9
   CELLNET_TEST_SPEED_SECONDS      Default: 10
+  CELLNET_TEST_OBSERVE_SECONDS    Default: 6
+  OPENCELLID_API_KEY              Optional: enables tower-lookup validation
+  CELLNET_LATITUDE                Optional device latitude for tower lookup
+  CELLNET_LONGITUDE               Optional device longitude for tower lookup
 
 Every command writes a separate log under /tmp/log/cellnet/cellnet-test-<timestamp>-<pid>.
 The final process exit code is nonzero when any required test fails.
@@ -64,7 +69,7 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-case "$WATCH_SECONDS:$STABILITY_SECONDS:$SPEED_SECONDS" in
+case "$WATCH_SECONDS:$STABILITY_SECONDS:$SPEED_SECONDS:$OBSERVE_SECONDS" in
     *[!0-9:]*|0:*|*:0:*|*:0)
         echo "ERROR: test durations must be positive whole seconds." >&2
         exit 2
@@ -180,6 +185,24 @@ run_expected_failure() {
     return 0
 }
 
+run_optional_tower_lookup() {
+    LOG_FILE="$RESULT_DIR/tower-lookup.log"
+    "$CELLNET_PATH" tower-lookup > "$LOG_FILE" 2>&1
+    RC=$?
+    if [ "$RC" -eq 0 ]; then
+        if assert_output "$LOG_FILE" '^OPENCELLID TOWER LOOKUP$'; then
+            pass_test "tower-lookup" "exit=0 log=$LOG_FILE"
+        else
+            fail_test "tower-lookup" "unexpected output log=$LOG_FILE"
+        fi
+    elif [ "$RC" -eq 3 ] &&
+         grep -q '^ERROR: OpenCellID returned no usable coordinates:' "$LOG_FILE"; then
+        skip_test "tower-lookup" "cell unavailable from provider; log=$LOG_FILE"
+    else
+        fail_test "tower-lookup" "exit=$RC log=$LOG_FILE"
+    fi
+}
+
 check_source_pattern() {
     TEST_NAME="$1"
     EXPECTED="$2"
@@ -269,7 +292,7 @@ else
     fail_test "WWAN-interface" "wwan0 not found"
 fi
 
-run_cellnet "help" '^Version: 9[.]5[.]0-radio-intelligence$' help || true
+run_cellnet "help" '^Version: 9[.]6[.]0-tower-intelligence$' help || true
 run_cellnet "status" '^Current network$' status || true
 run_cellnet "preferences" '^MODEM PREFERENCES$' preferences || true
 run_cellnet "signal" '^RADIO SIGNAL$' signal || true
@@ -279,6 +302,16 @@ run_cellnet "rf" '^RF / BANDS / CARRIER AGGREGATION$' rf || true
 run_cellnet "full" '^Current network$' full || true
 run_cellnet "cells" '^SERVING CELL INTELLIGENCE$' cells || true
 run_cellnet "tower-id" '^TOWER LOOKUP IDENTIFIERS$' tower-id || true
+run_cellnet "neighbors" '^NEIGHBORING CELL INFORMATION$' neighbors || true
+run_cellnet "tower-export-json" '^[{]$' tower-export json || true
+run_cellnet "tower-export-csv" '^plmn,carrier,mcc,mnc,rat,tac,eci,' tower-export csv || true
+run_cellnet "observe-cells" '^timestamp,plmn,rat,tac,eci,' observe-cells "$OBSERVE_SECONDS" || true
+if [ -n "${OPENCELLID_API_KEY:-}" ] &&
+   [ -n "${CELLNET_LATITUDE:-}" ] && [ -n "${CELLNET_LONGITUDE:-}" ]; then
+    run_optional_tower_lookup
+else
+    skip_test "tower-lookup" "set OpenCellID key and device coordinates to enable"
+fi
 if grep -Eq 'Primary RAT:[[:space:]]+(umts|gsm|wcdma)' "$RESULT_DIR/status.log"; then
     if grep -Eq 'LTE ECI / Cell ID:[[:space:]]+n/a$' "$RESULT_DIR/cells.log" &&
        grep -Eq 'LTE band:[[:space:]]+n/a$' "$RESULT_DIR/cells.log" &&

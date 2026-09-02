@@ -39,7 +39,12 @@ A transition between a value and `n/a` may reflect a temporarily missing modem r
 ## QMI LOC GNSS timeout
 A timeout can be caused by lack of satellite visibility indoors. It does not by itself prove GNSS hardware is absent.
 
-GNSS commands are not part of v9.5.0. Tower identifiers and any future external ERB correlation are not GNSS-derived device locations.
+GNSS commands are not part of v9.6.0. OpenCellID tower coordinates and manually supplied device coordinates are not GNSS data obtained from the modem.
+
+## OpenCellID lookup fails
+Confirm that `OPENCELLID_API_KEY`, `CELLNET_LATITUDE` and `CELLNET_LONGITUDE` are set, that `curl` or `wget` is available, and that the serving RAT is LTE with decimal MCC, MNC, TAC and ECI values. OpenCellID access and quotas depend on its current API policy. A missing match does not mean that the serving cell is invalid.
+
+Exit code `3` means that OpenCellID responded but did not provide usable coordinates. The command includes the sanitized provider message so a missing cell can be distinguished from authentication, quota and response-format problems. The on-device test records this condition as `SKIP`, because absence from a third-party crowdsourced database is not a local modem failure.
 
 ## SSH disconnects
 For long diagnostics:

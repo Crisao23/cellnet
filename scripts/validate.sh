@@ -18,7 +18,8 @@ cmp -s cellnet bin/cellnet || {
 
 echo "Checking required commands and safety invariants..."
 for command_name in \
-    tim vivo auto status full signal cell radio rf cells tower-id watch stability \
+    tim vivo auto status full signal cell radio rf cells tower-id neighbors tower-export \
+    tower-lookup observe-cells tower-assess tower-assess-speed watch stability \
     preferences scan snapshot \
     compare speedtest speedtest-fixed compare-speed compare-speed-fixed
 do
