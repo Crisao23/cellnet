@@ -5,6 +5,8 @@
 - Added normalized table, CSV and JSON views for LTE serving and neighboring-cell observations.
 - Preserved the complete raw QMI neighbor response as the default compatibility format.
 - Kept unavailable neighbor ECI values as `n/a` instead of inferring tower identities from PCI or EARFCN.
+- Fixed parsing of the indentation emitted by `qmicli --nas-get-cell-location-info`.
+- Made the device self-test reject empty neighboring-cell CSV and JSON results.
 
 ## 9.6.0-tower-intelligence
 

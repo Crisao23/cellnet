@@ -827,6 +827,10 @@ neighbors_csv() {
             pci=rsrq=rsrp=rssi=""
         }
         BEGIN { plmn=tac=eci=serving_pci=earfcn=band="n/a" }
+        {
+            sub(/\r$/, "", $0)
+            sub(/^[[:space:]]*/, "", $0)
+        }
         /^Intrafrequency LTE Info$/ { emit(); section="intra"; next }
         /^Interfrequency LTE Info$/ { emit(); section="inter"; next }
         /^LTE Info Neighboring/ { emit(); section="other"; next }

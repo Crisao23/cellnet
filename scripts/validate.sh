@@ -9,6 +9,7 @@ sh -n cellnet
 sh -n bin/cellnet
 sh -n install.sh
 sh -n scripts/test-device.sh
+sh -n scripts/test-neighbors-parser.sh
 
 echo "Checking executable copies..."
 cmp -s cellnet bin/cellnet || {
@@ -48,6 +49,9 @@ grep -Fq -- '-d both' cellnet || {
     echo "ERROR: bidirectional speed-test mode is missing." >&2
     exit 1
 }
+
+echo "Checking normalized neighbor parser..."
+sh scripts/test-neighbors-parser.sh
 
 if command -v shellcheck >/dev/null 2>&1; then
     echo "Running ShellCheck..."

@@ -1,0 +1,29 @@
+[/dev/wwan0qmi0] Successfully got cell location info
+Intrafrequency LTE Info
+        UE In Idle: 'no'
+        PLMN: '00101'
+        Tracking Area Code: '100'
+        Global Cell ID: '25601'
+        EUTRA Absolute RF Channel Number: '9410' (E-UTRA band 28: 700 APT)
+        Serving Cell ID: '10'
+        Cell [0]:
+                Physical Cell ID: '10'
+                RSRQ: '-10.0' dB
+                RSRP: '-70.0' dBm
+                RSSI: '-40.0' dBm
+        Cell [1]:
+                Physical Cell ID: '20'
+                RSRQ: '-12.0' dB
+                RSRP: '-75.0' dBm
+                RSSI: '-45.0' dBm
+Interfrequency LTE Info
+        UE In Idle: 'no'
+        Frequency [0]:
+                EUTRA Absolute RF Channel Number: '1700' (E-UTRA band 3: 1800+)
+                Cell [0]:
+                        Physical Cell ID: '30'
+                        RSRQ: '-14.0' dB
+                        RSRP: '-80.0' dBm
+                        RSSI: '-50.0' dBm
+LTE Info Neighboring GSM
+        UE In Idle: 'no'

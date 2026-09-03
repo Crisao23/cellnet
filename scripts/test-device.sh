@@ -306,6 +306,21 @@ run_cellnet "neighbors" '^NEIGHBORING CELL INFORMATION$' neighbors || true
 run_cellnet "neighbors-table" '^NEIGHBORING CELL SUMMARY$' neighbors table || true
 run_cellnet "neighbors-csv" '^type,rat,plmn,tac,eci,pci,earfcn,band,' neighbors-csv || true
 run_cellnet "neighbors-json" '^\[$' neighbors-json || true
+if ! grep -Eq '^[[:space:]]*Intrafrequency LTE Info$' "$RESULT_DIR/neighbors.log"; then
+    skip_test "neighbors-csv-records" "QMI returned no intrafrequency LTE section"
+    skip_test "neighbors-json-records" "QMI returned no intrafrequency LTE section"
+else
+    if grep -Eq '^(serving|neighbor),LTE,' "$RESULT_DIR/neighbors-csv.log"; then
+        pass_test "neighbors-csv-records" "structured LTE records present"
+    else
+        fail_test "neighbors-csv-records" "no structured LTE records; inspect $RESULT_DIR/neighbors-csv.log"
+    fi
+    if grep -Eq '^[[:space:]]*\{"type":"(serving|neighbor)"' "$RESULT_DIR/neighbors-json.log"; then
+        pass_test "neighbors-json-records" "structured LTE records present"
+    else
+        fail_test "neighbors-json-records" "no structured LTE records; inspect $RESULT_DIR/neighbors-json.log"
+    fi
+fi
 run_cellnet "tower-export-json" '^[{]$' tower-export json || true
 run_cellnet "tower-export-csv" '^plmn,carrier,mcc,mnc,rat,tac,eci,' tower-export csv || true
 run_cellnet "observe-cells" '^timestamp,plmn,rat,tac,eci,' observe-cells "$OBSERVE_SECONDS" || true
