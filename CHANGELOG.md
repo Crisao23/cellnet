@@ -7,6 +7,7 @@
 - Kept unavailable neighbor ECI values as `n/a` instead of inferring tower identities from PCI or EARFCN.
 - Fixed parsing of the indentation emitted by `qmicli --nas-get-cell-location-info`.
 - Made the device self-test reject empty neighboring-cell CSV and JSON results.
+- Added a reusable observation report and a read-only survey bundle containing serving-cell, neighboring-cell and temporal RF evidence.
 
 ## 9.6.0-tower-intelligence
 

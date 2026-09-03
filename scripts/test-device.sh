@@ -324,6 +324,7 @@ fi
 run_cellnet "tower-export-json" '^[{]$' tower-export json || true
 run_cellnet "tower-export-csv" '^plmn,carrier,mcc,mnc,rat,tac,eci,' tower-export csv || true
 run_cellnet "observe-cells" '^timestamp,plmn,rat,tac,eci,' observe-cells "$OBSERVE_SECONDS" || true
+run_cellnet "survey-report" '^CELL SURVEY SUMMARY$' survey-report "$RESULT_DIR/observe-cells.log" || true
 if [ -n "${OPENCELLID_API_KEY:-}" ] &&
    [ -n "${CELLNET_LATITUDE:-}" ] && [ -n "${CELLNET_LONGITUDE:-}" ]; then
     run_optional_tower_lookup

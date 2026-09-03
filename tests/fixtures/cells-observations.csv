@@ -1,0 +1,4 @@
+timestamp,plmn,rat,tac,eci,enodeb,sector,lte_pci,lte_earfcn,lte_rsrp,lte_rsrq,lte_snr,nr_arfcn,nr_pci,nr_rsrp,nr_rsrq,nr_snr
+2026-01-01T00:00:00+0000,00101,lte,100,25601,100,1,10,9410,-70,-10,10,634080,n/a,-68,-11,15
+2026-01-01T00:00:03+0000,00101,lte,100,25601,100,1,10,9410,-72,-12,8,634080,n/a,-66,-11,17
+2026-01-01T00:00:06+0000,00101,lte,100,25858,101,2,20,1700,-80,-15,5,n/a,n/a,n/a,n/a,n/a

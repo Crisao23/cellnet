@@ -221,6 +221,8 @@ cellnet speedtest
 | `cellnet tower-export [json\|csv]` | Structured serving-cell identifiers |
 | `cellnet tower-lookup [lat lon]` | OpenCellID coordinates, distance, bearing and confidence |
 | `cellnet observe-cells [seconds]` | Timestamped cell and RF observations as CSV |
+| `cellnet survey-report file.csv` | Summarize identity changes and LTE/NR RF metrics from observations |
+| `cellnet survey [seconds] [directory]` | Capture serving cell, neighbors, observations and summary together |
 | `cellnet tower-assess lat lon [seconds]` | OpenCellID proximity plus RF stability |
 | `cellnet tower-assess-speed lat lon [seconds]` | Proximity, stability and throughput; consumes data |
 | `cellnet watch [seconds]` | Timestamped read-only RF/cell monitor; default 60 s |

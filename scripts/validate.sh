@@ -10,6 +10,7 @@ sh -n bin/cellnet
 sh -n install.sh
 sh -n scripts/test-device.sh
 sh -n scripts/test-neighbors-parser.sh
+sh -n scripts/test-survey-report.sh
 
 echo "Checking executable copies..."
 cmp -s cellnet bin/cellnet || {
@@ -21,7 +22,7 @@ echo "Checking required commands and safety invariants..."
 for command_name in \
     tim vivo auto status full signal cell radio rf cells tower-id neighbors neighbors-csv \
     neighbors-json tower-export \
-    tower-lookup observe-cells tower-assess tower-assess-speed watch stability \
+    tower-lookup observe-cells survey-report survey tower-assess tower-assess-speed watch stability \
     preferences scan snapshot \
     compare speedtest speedtest-fixed compare-speed compare-speed-fixed
 do
@@ -52,6 +53,9 @@ grep -Fq -- '-d both' cellnet || {
 
 echo "Checking normalized neighbor parser..."
 sh scripts/test-neighbors-parser.sh
+
+echo "Checking survey report..."
+sh scripts/test-survey-report.sh
 
 if command -v shellcheck >/dev/null 2>&1; then
     echo "Running ShellCheck..."

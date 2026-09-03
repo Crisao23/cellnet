@@ -35,6 +35,7 @@ SPEEDTEST_SERVER="http://103.14.27.177:80"
 SPEEDTEST_MODE_DEFAULT="auto"
 CELLNET_BASELINE_VERSION="9.7.0-tower-survey"
 RADIO_POLL_INTERVAL=3
+CELLNET_SURVEY_ROOT="${CELLNET_SURVEY_ROOT:-/tmp/log/cellnet}"
 OPENCELLID_ENDPOINT="${OPENCELLID_ENDPOINT:-https://opencellid.org/cell/get}"
 SPEEDTEST_MONITOR_INTERVAL=3
 SPEEDTEST_RETRIES=1
@@ -1094,6 +1095,94 @@ observe_cells() {
     done
 }
 
+survey_report() {
+    OBSERVATION_FILE="$1"
+    [ -n "$OBSERVATION_FILE" ] || die "Provide an observation CSV file."
+    [ -f "$OBSERVATION_FILE" ] || die "Observation file not found: $OBSERVATION_FILE"
+
+    separator
+    echo "CELL SURVEY SUMMARY"
+    separator
+    awk -F, '
+        function update(key, value) {
+            if (value !~ /^-?[0-9]+([.][0-9]+)?$/) return
+            value += 0
+            if (!(key in metric_count) || value < metric_min[key]) metric_min[key]=value
+            if (!(key in metric_count) || value > metric_max[key]) metric_max[key]=value
+            metric_sum[key]+=value
+            metric_count[key]++
+        }
+        function show(key, label) {
+            printf "%-24s ", label ":"
+            if (!(key in metric_count)) print "n/a"
+            else printf "avg=%.2f min=%.2f max=%.2f samples=%d\n", \
+                metric_sum[key]/metric_count[key], metric_min[key], metric_max[key], metric_count[key]
+        }
+        NR == 1 {
+            if ($1 != "timestamp" || $2 != "plmn" || $5 != "eci" || $8 != "lte_pci") exit 2
+            next
+        }
+        {
+            samples++
+            if (samples == 1) first_timestamp=$1
+            last_timestamp=$1
+            identity=$2 "|" $3 "|" $4 "|" $5 "|" $8 "|" $9 "|" $13
+            identities[identity]=1
+            if (samples > 1 && identity != previous_identity) changes++
+            previous_identity=identity
+            update("lte_rsrp", $10)
+            update("lte_rsrq", $11)
+            update("lte_snr", $12)
+            update("nr_rsrp", $15)
+            update("nr_rsrq", $16)
+            update("nr_snr", $17)
+        }
+        END {
+            if (samples == 0) exit 3
+            for (identity in identities) unique_identities++
+            printf "%-24s %d\n", "Samples:", samples
+            printf "%-24s %s\n", "First sample:", first_timestamp
+            printf "%-24s %s\n", "Last sample:", last_timestamp
+            printf "%-24s %d\n", "Unique cell identities:", unique_identities
+            printf "%-24s %d\n", "Cell identity changes:", changes+0
+            show("lte_rsrp", "LTE RSRP")
+            show("lte_rsrq", "LTE RSRQ")
+            show("lte_snr", "LTE SNR")
+            show("nr_rsrp", "NR RSRP")
+            show("nr_rsrq", "NR RSRQ")
+            show("nr_snr", "NR SNR")
+        }
+    ' "$OBSERVATION_FILE" || die "Invalid or empty observation CSV: $OBSERVATION_FILE"
+}
+
+survey_capture() {
+    DURATION="${1:-300}"
+    OUTPUT_ROOT="${2:-$CELLNET_SURVEY_ROOT}"
+    validate_duration "$DURATION"
+    [ -n "$OUTPUT_ROOT" ] || die "Survey output directory cannot be empty."
+
+    SURVEY_TIMESTAMP="$(date '+%Y%m%d-%H%M%S' 2>/dev/null || echo unknown)"
+    SURVEY_DIR="$OUTPUT_ROOT/cellnet-survey-$SURVEY_TIMESTAMP-$$"
+    mkdir -p "$SURVEY_DIR" || die "Unable to create survey directory: $SURVEY_DIR"
+
+    echo "Collecting survey data in $SURVEY_DIR"
+    tower_export json > "$SURVEY_DIR/serving-cell.json"
+    neighbors > "$SURVEY_DIR/neighbors.raw"
+    neighbors_csv > "$SURVEY_DIR/neighbors.csv"
+    neighbors_json > "$SURVEY_DIR/neighbors.json"
+    if [ -n "${OPENCELLID_API_KEY:-}" ] &&
+       [ -n "${CELLNET_LATITUDE:-}" ] && [ -n "${CELLNET_LONGITUDE:-}" ]; then
+        tower_lookup "" "" > "$SURVEY_DIR/tower-lookup.txt" 2>&1 ||
+            echo "WARNING: OpenCellID lookup failed; inspect $SURVEY_DIR/tower-lookup.txt" >&2
+    fi
+    observe_cells "$DURATION" > "$SURVEY_DIR/cells.csv"
+    survey_report "$SURVEY_DIR/cells.csv" > "$SURVEY_DIR/summary.txt"
+
+    cat "$SURVEY_DIR/summary.txt"
+    echo
+    printf '%-24s %s\n' "Survey directory:" "$SURVEY_DIR"
+}
+
 tower_assess() {
     LATITUDE="$1"
     LONGITUDE="$2"
@@ -2101,6 +2190,13 @@ Usage:
   $0 observe-cells [seconds]
       Emit timestamped serving-cell and RF samples as CSV.
 
+  $0 survey-report observation.csv
+      Summarize a CSV created by observe-cells.
+
+  $0 survey [seconds] [output-directory]
+      Capture serving-cell, neighbor and RF evidence in one directory.
+      Default duration: 300 seconds.
+
   $0 tower-assess latitude longitude [seconds]
       Combine OpenCellID proximity with a read-only RF stability summary.
 
@@ -2162,6 +2258,8 @@ Examples:
   $0 tower-export json
   $0 tower-lookup -23.5505 -46.6333
   $0 observe-cells 180
+  $0 survey-report /tmp/log/cells.csv
+  $0 survey 300
   $0 tower-assess -23.5505 -46.6333 60
   $0 watch 60
   $0 stability 60
@@ -2276,6 +2374,14 @@ case "$CMD" in
 
     observe-cells)
         observe_cells "${ARG2:-60}"
+        ;;
+
+    survey-report)
+        survey_report "$ARG2"
+        ;;
+
+    survey)
+        survey_capture "${ARG2:-300}" "$ARG3"
         ;;
 
     tower-assess)

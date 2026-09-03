@@ -57,6 +57,12 @@ Queries the OpenCellID `/cell/get` endpoint for the current LTE MCC, MNC, TAC an
 ### `cellnet observe-cells [seconds]`
 Emits timestamped serving-cell and RF samples as CSV every three seconds. It is read-only and suitable for recording handovers or antenna-orientation tests.
 
+### `cellnet survey-report observation.csv`
+Summarizes an `observe-cells` CSV without performing new modem operations. It reports the observation interval, unique serving-cell identities, identity changes and minimum, average and maximum LTE/NR RF metrics.
+
+### `cellnet survey [seconds] [output-directory]`
+Creates a timestamped, read-only survey directory containing serving-cell JSON, raw and structured neighbor captures, timestamped RF observations and a summary. When the OpenCellID key and device coordinates are exported, it also records a tower lookup without storing the key. The default duration is 300 seconds and the default output root is `/tmp/log/cellnet`; override it with the second argument or `CELLNET_SURVEY_ROOT`.
+
 ### `cellnet tower-assess latitude longitude [seconds]`
 Runs `tower-lookup` followed by the existing read-only stability summary. It compares proximity with actual RF stability rather than treating the closest reported cell as automatically best.
 
