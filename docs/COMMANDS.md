@@ -63,6 +63,9 @@ Summarizes an `observe-cells` CSV without performing new modem operations. It re
 ### `cellnet survey [seconds] [output-directory]`
 Creates a timestamped, read-only survey directory containing serving-cell JSON, raw and structured neighbor captures, timestamped RF observations and a summary. When the OpenCellID key and device coordinates are exported, it also records a tower lookup without storing the key. The default duration is 300 seconds and the default output root is `/tmp/log/cellnet`; override it with the second argument or `CELLNET_SURVEY_ROOT`.
 
+### `cellnet survey-compare survey-a survey-b`
+Compares two completed survey directories. It reports serving identities, whether the PLMN, LTE cell and calculated eNodeB match, LTE/NR RF averages and B-minus-A deltas. A direct RF comparison is marked valid only when PLMN, ECI and LTE EARFCN match; otherwise the deltas are explicitly contextual. When both neighbor CSV files exist, common neighbor fingerprints are counted using PCI plus EARFCN.
+
 ### `cellnet tower-assess latitude longitude [seconds]`
 Runs `tower-lookup` followed by the existing read-only stability summary. It compares proximity with actual RF stability rather than treating the closest reported cell as automatically best.
 

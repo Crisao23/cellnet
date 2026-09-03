@@ -8,6 +8,7 @@
 - Fixed parsing of the indentation emitted by `qmicli --nas-get-cell-location-info`.
 - Made the device self-test reject empty neighboring-cell CSV and JSON results.
 - Added a reusable observation report and a read-only survey bundle containing serving-cell, neighboring-cell and temporal RF evidence.
+- Added qualified comparison of two survey bundles, including identity checks, RF deltas and common PCI/EARFCN neighbor fingerprints.
 
 ## 9.6.0-tower-intelligence
 

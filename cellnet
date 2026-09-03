@@ -1183,6 +1183,92 @@ survey_capture() {
     printf '%-24s %s\n' "Survey directory:" "$SURVEY_DIR"
 }
 
+survey_compare() {
+    SURVEY_A="$1"
+    SURVEY_B="$2"
+    [ -d "$SURVEY_A" ] || die "Survey directory not found: $SURVEY_A"
+    [ -d "$SURVEY_B" ] || die "Survey directory not found: $SURVEY_B"
+    [ -f "$SURVEY_A/cells.csv" ] || die "Missing survey observations: $SURVEY_A/cells.csv"
+    [ -f "$SURVEY_B/cells.csv" ] || die "Missing survey observations: $SURVEY_B/cells.csv"
+
+    separator
+    echo "CELL SURVEY COMPARISON"
+    separator
+    printf '%-24s %s\n' "Survey A:" "$SURVEY_A"
+    printf '%-24s %s\n' "Survey B:" "$SURVEY_B"
+    echo
+
+    awk -F, '
+        function add(set, key, value) {
+            if (value !~ /^-?[0-9]+([.][0-9]+)?$/) return
+            sum[set,key]+=value
+            count[set,key]++
+        }
+        function average(set, key) {
+            return count[set,key] ? sprintf("%.2f", sum[set,key]/count[set,key]) : "n/a"
+        }
+        function yesno(value) { return value ? "yes" : "no" }
+        function metric(key, label, a, b, delta) {
+            a=average(1,key); b=average(2,key)
+            delta=(a == "n/a" || b == "n/a") ? "n/a" : sprintf("%+.2f", b-a)
+            printf "%-12s %-12s %-12s %-12s\n", label, a, b, delta
+        }
+        FNR == 1 {
+            set++
+            if ($1 != "timestamp" || $2 != "plmn" || $5 != "eci" || $8 != "lte_pci") exit 2
+            next
+        }
+        {
+            samples[set]++
+            if (samples[set] == 1) {
+                plmn[set]=$2; rat[set]=$3; tac[set]=$4; eci[set]=$5
+                enodeb[set]=$6; pci[set]=$8; earfcn[set]=$9; nr_arfcn[set]=$13
+            }
+            add(set,"lte_rsrp",$10); add(set,"lte_rsrq",$11); add(set,"lte_snr",$12)
+            add(set,"nr_rsrp",$15); add(set,"nr_rsrq",$16); add(set,"nr_snr",$17)
+        }
+        END {
+            if (samples[1] == 0 || samples[2] == 0) exit 3
+            printf "%-24s %-14s %-14s\n", "", "A", "B"
+            printf "%-24s %-14s %-14s\n", "PLMN:", plmn[1], plmn[2]
+            printf "%-24s %-14s %-14s\n", "LTE ECI:", eci[1], eci[2]
+            printf "%-24s %-14s %-14s\n", "eNodeB:", enodeb[1], enodeb[2]
+            printf "%-24s %-14s %-14s\n", "LTE PCI:", pci[1], pci[2]
+            printf "%-24s %-14s %-14s\n", "LTE EARFCN:", earfcn[1], earfcn[2]
+            printf "%-24s %-14s %-14s\n", "NR ARFCN:", nr_arfcn[1], nr_arfcn[2]
+            printf "%-24s %-14s %-14s\n", "Samples:", samples[1], samples[2]
+            print ""
+            printf "%-24s %s\n", "Same PLMN:", yesno(plmn[1] == plmn[2])
+            printf "%-24s %s\n", "Same LTE cell:", yesno(plmn[1] == plmn[2] && tac[1] == tac[2] && eci[1] == eci[2])
+            printf "%-24s %s\n", "Same eNodeB:", yesno(plmn[1] == plmn[2] && enodeb[1] == enodeb[2] && enodeb[1] != "n/a")
+            comparable=(plmn[1] == plmn[2] && eci[1] == eci[2] && earfcn[1] == earfcn[2])
+            printf "%-24s %s\n", "Direct RF comparison:", yesno(comparable)
+            print ""
+            printf "%-12s %-12s %-12s %-12s\n", "METRIC", "A AVG", "B AVG", "DELTA B-A"
+            metric("lte_rsrp","LTE RSRP"); metric("lte_rsrq","LTE RSRQ"); metric("lte_snr","LTE SNR")
+            metric("nr_rsrp","NR RSRP"); metric("nr_rsrq","NR RSRQ"); metric("nr_snr","NR SNR")
+            if (!comparable) {
+                print ""
+                print "CAUTION: RF deltas are contextual because the serving cell or channel differs."
+            }
+        }
+    ' "$SURVEY_A/cells.csv" "$SURVEY_B/cells.csv" ||
+        die "Invalid or empty survey observations."
+
+    if [ -f "$SURVEY_A/neighbors.csv" ] && [ -f "$SURVEY_B/neighbors.csv" ]; then
+        COMMON_NEIGHBORS="$(awk -F, '
+            FNR == 1 { set++; next }
+            $1 == "neighbor" { key=$6 "|" $7; seen[set,key]=1 }
+            END { for (key in seen) { split(key, part, SUBSEP); if (part[1] == 1) a++ }
+                  for (key in seen) { split(key, part, SUBSEP); if (part[1] == 2) b++ }
+                  for (key in seen) { split(key, part, SUBSEP); if (part[1] == 1 && seen[2,part[2]]) common++ }
+                  printf "%d|%d|%d", a+0, b+0, common+0 }
+        ' "$SURVEY_A/neighbors.csv" "$SURVEY_B/neighbors.csv")"
+        echo
+        printf '%-24s %s\n' "Neighbor fingerprints:" "$COMMON_NEIGHBORS (A|B|common; PCI+EARFCN)"
+    fi
+}
+
 tower_assess() {
     LATITUDE="$1"
     LONGITUDE="$2"
@@ -2197,6 +2283,9 @@ Usage:
       Capture serving-cell, neighbor and RF evidence in one directory.
       Default duration: 300 seconds.
 
+  $0 survey-compare survey-a survey-b
+      Compare two survey directories and qualify RF deltas.
+
   $0 tower-assess latitude longitude [seconds]
       Combine OpenCellID proximity with a read-only RF stability summary.
 
@@ -2260,6 +2349,7 @@ Examples:
   $0 observe-cells 180
   $0 survey-report /tmp/log/cells.csv
   $0 survey 300
+  $0 survey-compare /tmp/log/cellnet/survey-a /tmp/log/cellnet/survey-b
   $0 tower-assess -23.5505 -46.6333 60
   $0 watch 60
   $0 stability 60
@@ -2382,6 +2472,10 @@ case "$CMD" in
 
     survey)
         survey_capture "${ARG2:-300}" "$ARG3"
+        ;;
+
+    survey-compare)
+        survey_compare "$ARG2" "$ARG3"
         ;;
 
     tower-assess)

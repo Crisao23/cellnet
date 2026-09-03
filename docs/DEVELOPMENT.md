@@ -95,6 +95,8 @@ The normalized neighbor parser is based on the tested `qmicli --nas-get-cell-loc
 
 `survey-report` consumes the exact CSV schema emitted by `observe-cells`. If that schema changes, update the report field mapping, its synthetic fixture and the on-device report check together. Survey bundles are evidence captures: keep them read-only with respect to modem configuration and do not commit generated device results.
 
+`survey-compare` uses the same observation schema and must not rank cross-operator or cross-cell RF deltas as directly comparable. Neighbor correlation uses PCI plus EARFCN only; it does not imply a globally unique cell identity.
+
 `CELLNET_QMI_DEVICE`, `CELLNET_QMICLI` and `CELLNET_WWAN_IF` may override hardware paths for isolated fixtures. Production behavior retains `/dev/wwan0qmi0`, `qmicli` and `wwan0` as defaults.
 
 The default is read-only. Optional modes are `--scan`, `--carrier`, `--speed`, and `--all`. Carrier mode restores automatic selection during cleanup. Speed mode consumes cellular data. Each test captures output, validates an expected marker and writes a PASS/FAIL/SKIP summary under `/tmp/log/cellnet/cellnet-test-*`.
