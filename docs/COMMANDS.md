@@ -43,8 +43,10 @@ Decimal LTE ECI values are also decomposed using the common LTE layout (`eNodeB 
 ### `cellnet tower-id`
 Prints TAC, ECI, calculated eNodeB/sector, PCI, EARFCN and available NR identifiers, plus a compact lookup fingerprint. It does not contact ANATEL, another tower database, or the Internet.
 
-### `cellnet neighbors`
-Prints the complete read-only QMI cell-location response. Neighbor fields vary by modem state, firmware and RAT, so the command deliberately preserves the modem labels instead of guessing a normalized identity.
+### `cellnet neighbors [raw|table|csv|json]`
+The default `raw` format preserves the complete read-only QMI cell-location response. `table`, `csv` and `json` normalize the serving and neighboring LTE observations exposed by the tested firmware, including PCI, EARFCN, band, RSRQ, RSRP and RSSI.
+
+The QMI response provides ECI only for the serving LTE cell. Neighbor observations therefore retain `eci=n/a`; PCI and EARFCN must not be treated as a globally unique tower identity. `neighbors-csv` and `neighbors-json` are aliases for the corresponding structured formats.
 
 ### `cellnet tower-export [json|csv]`
 Exports the normalized serving-cell identity without performing an Internet lookup. The default format is JSON; CSV is suitable for observation logs and external analysis.

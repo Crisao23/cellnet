@@ -303,6 +303,9 @@ run_cellnet "full" '^Current network$' full || true
 run_cellnet "cells" '^SERVING CELL INTELLIGENCE$' cells || true
 run_cellnet "tower-id" '^TOWER LOOKUP IDENTIFIERS$' tower-id || true
 run_cellnet "neighbors" '^NEIGHBORING CELL INFORMATION$' neighbors || true
+run_cellnet "neighbors-table" '^NEIGHBORING CELL SUMMARY$' neighbors table || true
+run_cellnet "neighbors-csv" '^type,rat,plmn,tac,eci,pci,earfcn,band,' neighbors-csv || true
+run_cellnet "neighbors-json" '^\[$' neighbors-json || true
 run_cellnet "tower-export-json" '^[{]$' tower-export json || true
 run_cellnet "tower-export-csv" '^plmn,carrier,mcc,mnc,rat,tac,eci,' tower-export csv || true
 run_cellnet "observe-cells" '^timestamp,plmn,rat,tac,eci,' observe-cells "$OBSERVE_SECONDS" || true
@@ -329,6 +332,7 @@ run_cellnet "stability" '^RF STABILITY SUMMARY$' stability "$STABILITY_SECONDS" 
 
 run_expected_failure "invalid-watch" '^ERROR: Duration must be greater than zero[.]$' watch 0 || true
 run_expected_failure "invalid-stability" '^ERROR: Invalid duration:' stability invalid || true
+run_expected_failure "invalid-neighbors-format" '^ERROR: Unsupported neighbors format:' neighbors invalid || true
 run_expected_failure "unknown-command" '^Unknown option: self-test-invalid$' self-test-invalid || true
 
 if [ "$RUN_SCAN" -eq 1 ]; then

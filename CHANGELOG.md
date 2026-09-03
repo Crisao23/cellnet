@@ -1,5 +1,11 @@
 # Changelog
 
+## 9.7.0-tower-survey
+
+- Added normalized table, CSV and JSON views for LTE serving and neighboring-cell observations.
+- Preserved the complete raw QMI neighbor response as the default compatibility format.
+- Kept unavailable neighbor ECI values as `n/a` instead of inferring tower identities from PCI or EARFCN.
+
 ## 9.6.0-tower-intelligence
 
 - Added read-only neighboring-cell output and structured tower identifier export.

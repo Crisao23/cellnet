@@ -8,7 +8,7 @@ The project was developed using a **Hypecon MVNO eSIM in Brazil**, with access t
 
 Because the U5G Max Outdoor UI currently does not expose manual host-network selection, `cellnet` uses the modem's QMI interface to inspect the current network, select a specific PLMN, analyze LTE/5G radio conditions and compare real-world performance.
 
-Current baseline: **v9.6.0-tower-intelligence**
+Current development baseline: **v9.7.0-tower-survey**
 
 > This is an independent project and is not affiliated with or endorsed by Ubiquiti, Hypecon, TIM, Vivo or Claro.
 
@@ -215,7 +215,9 @@ cellnet speedtest
 | `cellnet rf` | Bands, LTE CA, cell and signal summary |
 | `cellnet cells` | Normalized serving-cell, LTE/NR signal and CA summary |
 | `cellnet tower-id` | Identifiers for external tower/ERB correlation |
-| `cellnet neighbors` | Raw read-only QMI serving/neighbor cell inventory |
+| `cellnet neighbors [raw\|table\|csv\|json]` | Raw or normalized read-only LTE neighbor inventory |
+| `cellnet neighbors-csv` | Normalized neighbor observations as CSV |
+| `cellnet neighbors-json` | Normalized neighbor observations as JSON |
 | `cellnet tower-export [json\|csv]` | Structured serving-cell identifiers |
 | `cellnet tower-lookup [lat lon]` | OpenCellID coordinates, distance, bearing and confidence |
 | `cellnet observe-cells [seconds]` | Timestamped cell and RF observations as CSV |

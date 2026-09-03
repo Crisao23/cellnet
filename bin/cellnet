@@ -16,9 +16,9 @@
 #   - Fixed-server speed tests use the configured Ubiquiti server.
 #
 
-DEVICE="/dev/wwan0qmi0"
-WWAN_IF="wwan0"
-QMICLI="qmicli"
+DEVICE="${CELLNET_QMI_DEVICE:-/dev/wwan0qmi0}"
+WWAN_IF="${CELLNET_WWAN_IF:-wwan0}"
+QMICLI="${CELLNET_QMICLI:-qmicli}"
 
 TIM_PLMN="72403"
 VIVO_PLMN="72410"
@@ -33,7 +33,7 @@ NSA_STABILIZE=8
 SPEEDTEST_DURATION=10
 SPEEDTEST_SERVER="http://103.14.27.177:80"
 SPEEDTEST_MODE_DEFAULT="auto"
-CELLNET_BASELINE_VERSION="9.6.0-tower-intelligence"
+CELLNET_BASELINE_VERSION="9.7.0-tower-survey"
 RADIO_POLL_INTERVAL=3
 OPENCELLID_ENDPOINT="${OPENCELLID_ENDPOINT:-https://opencellid.org/cell/get}"
 SPEEDTEST_MONITOR_INTERVAL=3
@@ -802,6 +802,103 @@ neighbors() {
     echo
     qmi --nas-get-cell-location-info 2>&1 ||
         die "Unable to obtain neighboring cell information."
+}
+
+neighbors_csv() {
+    CELL_INFO="$(qmi --nas-get-cell-location-info 2>&1)" ||
+        die "Unable to obtain neighboring cell information."
+
+    echo "type,rat,plmn,tac,eci,pci,earfcn,band,rsrq_db,rsrp_dbm,rssi_dbm"
+    echo "$CELL_INFO" | awk '
+        function quoted(line, value) {
+            value=line
+            sub(/^[^\047]*\047/, "", value)
+            sub(/\047.*/, "", value)
+            return value
+        }
+        function emit(kind) {
+            if (pci == "") return
+            kind="neighbor"
+            if (section == "intra" && pci == serving_pci) kind="serving"
+            printf "%s,LTE,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", \
+                kind, (kind == "serving" ? plmn : "n/a"), \
+                (kind == "serving" ? tac : "n/a"), (kind == "serving" ? eci : "n/a"), \
+                pci, earfcn, band, rsrq, rsrp, rssi
+            pci=rsrq=rsrp=rssi=""
+        }
+        BEGIN { plmn=tac=eci=serving_pci=earfcn=band="n/a" }
+        /^Intrafrequency LTE Info$/ { emit(); section="intra"; next }
+        /^Interfrequency LTE Info$/ { emit(); section="inter"; next }
+        /^LTE Info Neighboring/ { emit(); section="other"; next }
+        /^PLMN:/ && section == "intra" { plmn=quoted($0); next }
+        /^Tracking Area Code:/ && section == "intra" { tac=quoted($0); next }
+        /^Global Cell ID:/ && section == "intra" { eci=quoted($0); next }
+        /^Serving Cell ID:/ && section == "intra" { serving_pci=quoted($0); next }
+        /^EUTRA Absolute RF Channel Number:/ {
+            emit()
+            earfcn=quoted($0)
+            band=$0
+            if (band ~ /E-UTRA band [0-9]+:/) {
+                sub(/^.*E-UTRA band /, "", band)
+                sub(/:.*/, "", band)
+                band="B" band
+            } else band="n/a"
+            next
+        }
+        /^Frequency \[[0-9]+\]:/ { emit(); earfcn=band="n/a"; next }
+        /^Cell \[[0-9]+\]:/ && (section == "intra" || section == "inter") { emit(); next }
+        /^Physical Cell ID:/ && (section == "intra" || section == "inter") { pci=quoted($0); next }
+        /^RSRQ:/ && pci != "" { rsrq=quoted($0); next }
+        /^RSRP:/ && pci != "" { rsrp=quoted($0); next }
+        /^RSSI:/ && pci != "" { rssi=quoted($0); next }
+        END { emit() }
+    '
+}
+
+neighbors_table() {
+    neighbors_csv | awk -F, '
+        NR == 1 {
+            printf "%-9s %-4s %-6s %-7s %-11s %-5s %-7s %-5s %-9s %-10s %-10s\n", \
+                "TYPE", "RAT", "PLMN", "TAC", "ECI", "PCI", "EARFCN", "BAND", "RSRQ dB", "RSRP dBm", "RSSI dBm"
+            next
+        }
+        {
+            printf "%-9s %-4s %-6s %-7s %-11s %-5s %-7s %-5s %-9s %-10s %-10s\n", \
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+        }
+    '
+}
+
+neighbors_json() {
+    neighbors_csv | awk -F, '
+        BEGIN { print "["; first=1 }
+        NR > 1 {
+            if (!first) print ","
+            first=0
+            printf "  {\"type\":\"%s\",\"rat\":\"%s\",\"plmn\":\"%s\",\"tac\":\"%s\",\"eci\":\"%s\",\"pci\":\"%s\",\"earfcn\":\"%s\",\"band\":\"%s\",\"rsrq_db\":\"%s\",\"rsrp_dbm\":\"%s\",\"rssi_dbm\":\"%s\"}", \
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+        }
+        END { print "\n]" }
+    '
+}
+
+neighbors_summary() {
+    separator
+    echo "NEIGHBORING CELL SUMMARY"
+    separator
+    neighbors_table
+    echo
+    echo "Neighbor ECI values are n/a because this QMI response exposes only PCI and frequency."
+}
+
+neighbors_command() {
+    case "${1:-raw}" in
+        raw) neighbors ;;
+        table) neighbors_summary ;;
+        csv) neighbors_csv ;;
+        json) neighbors_json ;;
+        *) die "Unsupported neighbors format: $1 (use raw, table, csv or json)." ;;
+    esac
 }
 
 tower_export() {
@@ -1979,8 +2076,15 @@ Usage:
   $0 tower-id
       Show identifiers for external tower correlation without an Internet lookup.
 
-  $0 neighbors
-      Show the modem's read-only cell-location and neighboring-cell response.
+  $0 neighbors [raw|table|csv|json]
+      Show the modem's read-only neighboring-cell response.
+      Default format: raw.
+
+  $0 neighbors-csv
+      Export normalized serving and neighboring LTE observations as CSV.
+
+  $0 neighbors-json
+      Export normalized serving and neighboring LTE observations as JSON.
 
   $0 tower-export [json|csv]
       Export serving-cell identifiers in a structured format.
@@ -2048,6 +2152,9 @@ Examples:
   $0 cells
   $0 tower-id
   $0 neighbors
+  $0 neighbors table
+  $0 neighbors-csv
+  $0 neighbors-json
   $0 tower-export json
   $0 tower-lookup -23.5505 -46.6333
   $0 observe-cells 180
@@ -2144,7 +2251,15 @@ case "$CMD" in
         ;;
 
     neighbors)
-        neighbors
+        neighbors_command "${ARG2:-raw}"
+        ;;
+
+    neighbors-csv)
+        neighbors_csv
+        ;;
+
+    neighbors-json)
+        neighbors_json
         ;;
 
     tower-export)

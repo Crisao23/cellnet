@@ -91,6 +91,10 @@ chmod +x /tmp/log/cellnet/cellnet /tmp/log/cellnet/test-device.sh
 
 Repository validation runs ShellCheck at `warning` severity. This keeps errors and actionable warnings blocking while avoiding CI failures caused only by informational rules added or reclassified between distribution-provided ShellCheck versions. Fix informational findings when they identify real ambiguity; do not suppress warnings to bypass a genuine defect.
 
+The normalized neighbor parser is based on the tested `qmicli --nas-get-cell-location-info` sections `Intrafrequency LTE Info` and `Interfrequency LTE Info`. Preserve the raw format as the compatibility and troubleshooting path. Never synthesize a neighbor ECI from PCI or EARFCN.
+
+`CELLNET_QMI_DEVICE`, `CELLNET_QMICLI` and `CELLNET_WWAN_IF` may override hardware paths for isolated fixtures. Production behavior retains `/dev/wwan0qmi0`, `qmicli` and `wwan0` as defaults.
+
 The default is read-only. Optional modes are `--scan`, `--carrier`, `--speed`, and `--all`. Carrier mode restores automatic selection during cleanup. Speed mode consumes cellular data. Each test captures output, validates an expected marker and writes a PASS/FAIL/SKIP summary under `/tmp/log/cellnet/cellnet-test-*`.
 
 ## Language policy
