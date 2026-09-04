@@ -3,6 +3,7 @@
 ## 9.7.0-tower-survey
 
 - Added a detailed cellular performance and antenna-location guide with architecture, decision and optimization diagrams.
+- Replaced fragile reference-directory and legacy documentation links with verified direct ETSI PDFs and the maintained libqmi API index.
 - Removed a root-level documentation file that exactly duplicated the canonical copy under `docs/`.
 - Removed repeated signal and cell-location QMI requests from `full` while preserving its information coverage through the RF section.
 - Normalized modem LTE band labels such as `eutran-7` to the public `B7` form.

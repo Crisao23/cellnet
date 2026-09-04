@@ -54,7 +54,7 @@ Consequences for optimization:
 - NR availability can change with load, scheduling and modem state.
 - A 5G indicator alone does not prove that traffic is currently using NR.
 
-The 3GPP describes NSA as an architecture in which LTE provides the anchor/control relationship and NR is added through dual connectivity. See the [3GPP LTE evolution and 5G overview](https://www.3gpp.org/ftp/information/presentations/presentations_2016/2016_11_flore_LTE%20evolution%20and%205G.pdf).
+The 3GPP multi-connectivity specification describes the LTE/NR master-node and secondary-node relationships used by EN-DC. See [ETSI TS 137 340 V18.5.0 (3GPP TS 37.340)](https://www.etsi.org/deliver/etsi_ts/137300_137399/137340/18.05.00_60/ts_137340v180500p.pdf).
 
 ## 3. Cells, sectors and frequencies
 
@@ -88,7 +88,7 @@ Never identify a tower using PCI alone. The same PCI can be reused by many sites
 
 ## 4. Understanding radio measurements
 
-LTE measurement definitions are standardized in 3GPP TS 36.214, published by ETSI as [ETSI TS 136 214](https://www.etsi.org/deliver/etsi_ts/136200_136299/136214/18.00.00_60/). NR measurement definitions are standardized in TS 38.215; see [ETSI TS 138 215](https://www.etsi.org/deliver/etsi_ts/138200_138299/138215/18.02.00_60/).
+LTE measurement definitions are standardized in 3GPP TS 36.214, published as [ETSI TS 136 214 V18.0.0](https://www.etsi.org/deliver/etsi_ts/136200_136299/136214/18.00.00_60/ts_136214v180000p.pdf). NR measurement definitions are standardized in [ETSI TS 138 215 V18.2.0](https://www.etsi.org/deliver/etsi_ts/138200_138299/138215/18.02.00_60/ts_138215v180200p.pdf).
 
 ### RSRP: reference-signal power
 
@@ -342,8 +342,9 @@ Use for controlled performance comparison. It consumes cellular data.
 
 ## 15. References
 
-- [3GPP LTE evolution and 5G overview](https://www.3gpp.org/ftp/information/presentations/presentations_2016/2016_11_flore_LTE%20evolution%20and%205G.pdf)
-- [ETSI TS 136 214 — E-UTRA physical-layer measurements](https://www.etsi.org/deliver/etsi_ts/136200_136299/136214/18.00.00_60/)
-- [ETSI TS 138 215 — NR physical-layer measurements](https://www.etsi.org/deliver/etsi_ts/138200_138299/138215/18.02.00_60/)
-- [libqmi Network Access Service reference](https://www.freedesktop.org/software/libqmi/libqmi-glib/1.30.8/ch03.html)
+- [ETSI TS 137 340 V18.5.0 — LTE/NR multi-connectivity (3GPP TS 37.340)](https://www.etsi.org/deliver/etsi_ts/137300_137399/137340/18.05.00_60/ts_137340v180500p.pdf)
+- [ETSI TS 136 214 V18.0.0 — E-UTRA physical-layer measurements](https://www.etsi.org/deliver/etsi_ts/136200_136299/136214/18.00.00_60/ts_136214v180000p.pdf)
+- [ETSI TS 138 215 V18.2.0 — NR physical-layer measurements](https://www.etsi.org/deliver/etsi_ts/138200_138299/138215/18.02.00_60/ts_138215v180200p.pdf)
+- [Official libqmi documentation and API reference index](https://mobile-broadband.pages.freedesktop.org/docs/libqmi/api-reference/)
 
+The ETSI links above intentionally target specific published PDF versions so the cited clauses do not silently change. The libqmi link targets its maintained API index, which provides links to the current and archived versioned references.
