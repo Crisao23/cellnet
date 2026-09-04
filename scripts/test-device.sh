@@ -301,6 +301,13 @@ run_cellnet "radio" '^LTE / 5G SERVICES$' radio || true
 run_cellnet "rf" '^RF / BANDS / CARRIER AGGREGATION$' rf || true
 run_cellnet "full" '^Current network$' full || true
 run_cellnet "cells" '^SERVING CELL INTELLIGENCE$' cells || true
+if grep -Eq '^(LTE band:|Primary LTE carrier:|Observed LTE SCells:).*eutran-' "$RESULT_DIR/cells.log"; then
+    fail_test "normalized-LTE-bands" "legacy eutran-* label found; inspect $RESULT_DIR/cells.log"
+elif grep -Eq '^LTE band:[[:space:]]+(B[0-9]+|n/a)$' "$RESULT_DIR/cells.log"; then
+    pass_test "normalized-LTE-bands" "public LTE band labels are normalized"
+else
+    fail_test "normalized-LTE-bands" "normalized LTE band field missing; inspect $RESULT_DIR/cells.log"
+fi
 run_cellnet "tower-id" '^TOWER LOOKUP IDENTIFIERS$' tower-id || true
 run_cellnet "neighbors" '^NEIGHBORING CELL INFORMATION$' neighbors || true
 run_cellnet "neighbors-table" '^NEIGHBORING CELL SUMMARY$' neighbors table || true

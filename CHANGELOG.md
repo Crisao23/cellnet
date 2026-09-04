@@ -5,6 +5,7 @@
 - Removed a root-level documentation file that exactly duplicated the canonical copy under `docs/`.
 - Removed repeated signal and cell-location QMI requests from `full` while preserving its information coverage through the RF section.
 - Normalized modem LTE band labels such as `eutran-7` to the public `B7` form.
+- Applied the same `B<number>` normalization to primary and secondary LTE Carrier Aggregation labels.
 - Added normalized table, CSV and JSON views for LTE serving and neighboring-cell observations.
 - Preserved the complete raw QMI neighbor response as the default compatibility format.
 - Kept unavailable neighbor ECI values as `n/a` instead of inferring tower identities from PCI or EARFCN.

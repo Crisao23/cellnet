@@ -687,10 +687,23 @@ collect_radio_sample() {
     NSA_STATUS="$(echo "$SYSTEM" | quoted_field '5G NSA Available:')"
 
     CA_ACTIVE="$(echo "$CA_INFO" | grep -c "State: 'activated'" 2>/dev/null)"
-    CA_PRIMARY="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /LTE Band:/{band=$2} p && /RX Channel:/{channel=$2} p && band!="" && channel!="" {print band "@" channel; exit}')"
+    CA_PRIMARY="$(echo "$CA_INFO" | awk -F"'" '
+        function normalize_band(value) {
+            if (value ~ /^eutran-[0-9]+$/) { sub(/^eutran-/, "B", value) }
+            return value
+        }
+        /Primary Cell Info/{p=1;next}
+        p && /LTE Band:/{band=normalize_band($2)}
+        p && /RX Channel:/{channel=$2}
+        p && band!="" && channel!="" {print band "@" channel; exit}
+    ')"
     CA_SCELLS="$(echo "$CA_INFO" | awk -F"'" '
+        function normalize_band(value) {
+            if (value ~ /^eutran-[0-9]+$/) { sub(/^eutran-/, "B", value) }
+            return value
+        }
         /Secondary Cell [0-9]+ Info/ { sec=1; band=""; channel=""; state=""; next }
-        sec && /LTE Band:/ { band=$2 }
+        sec && /LTE Band:/ { band=normalize_band($2) }
         sec && /RX Channel:/ { channel=$2 }
         sec && /State:/ {
             state=$2
