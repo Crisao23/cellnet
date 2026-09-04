@@ -367,21 +367,9 @@ full_status() {
 
     echo
     separator
-    echo "SIGNAL"
-    separator
-    qmi --nas-get-signal-info
-
-    echo
-    separator
     echo "LTE / 5G"
     separator
     qmi --nas-get-system-info
-
-    echo
-    separator
-    echo "CELL"
-    separator
-    qmi --nas-get-cell-location-info
 
     echo
     rf_status
@@ -614,6 +602,14 @@ record_field() {
         '{ print $field_number }'
 }
 
+normalize_lte_band() {
+    case "$1" in
+        eutran-[0-9]*) echo "B${1#eutran-}" ;;
+        E-UTRA-band-[0-9]*) echo "B${1#E-UTRA-band-}" ;;
+        *) echo "$1" ;;
+    esac
+}
+
 collect_radio_sample() {
     SERVING="$(get_serving)"
     SIGNAL="$(qmi --nas-get-signal-info 2>/dev/null || true)"
@@ -673,6 +669,7 @@ collect_radio_sample() {
         LTE_EARFCN="$(echo "$CELL_INFO" | quoted_field 'EUTRA Absolute RF Channel Number:')"
         LTE_BAND="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /LTE Band:/{print $2; exit}')"
         [ -n "$LTE_BAND" ] || LTE_BAND="$(echo "$RF_INFO" | awk -F"'" '/Radio Interface:.*lte/{lte=1;next} lte && /Active Band Class:/{print $2; exit}')"
+        LTE_BAND="$(normalize_lte_band "${LTE_BAND:-n/a}")"
         LTE_BANDWIDTH="$(echo "$CA_INFO" | awk -F"'" '/Primary Cell Info/{p=1;next} p && /DL Bandwidth:/{print $2; exit}')"
     fi
 

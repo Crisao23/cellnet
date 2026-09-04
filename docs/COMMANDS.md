@@ -48,6 +48,8 @@ The default `raw` format preserves the complete read-only QMI cell-location resp
 
 The QMI response provides ECI only for the serving LTE cell. Neighbor observations therefore retain `eci=n/a`; PCI and EARFCN must not be treated as a globally unique tower identity. `neighbors-csv` and `neighbors-json` are aliases for the corresponding structured formats.
 
+The hyphenated aliases are retained for scripting compatibility; `neighbors csv` and `neighbors json` are the canonical forms for new usage.
+
 ### `cellnet tower-export [json|csv]`
 Exports the normalized serving-cell identity without performing an Internet lookup. The default format is JSON; CSV is suitable for observation logs and external analysis.
 
