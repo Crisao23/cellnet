@@ -328,6 +328,7 @@ OpenCellID coordinates are crowdsourced estimates and may identify a cell covera
 - [Command Reference](docs/COMMANDS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [RF Metrics](docs/RF-METRICS.md)
+- [Cellular Performance and Antenna Location Guide](docs/CELLULAR-PERFORMANCE-GUIDE.md)
 - [Speed Testing](docs/SPEEDTEST.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Development and Regression Policy](docs/DEVELOPMENT.md)
